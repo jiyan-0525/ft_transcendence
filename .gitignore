@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Secrets — never commit real values
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Database
+prisma/*.db
+prisma/*.db-journal
+
+# User uploads (avatars)
+uploads/
+!uploads/.gitkeep
+
+# Test artefacts
+coverage/
+playwright-report/
+test-results/
+.nyc_output/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
