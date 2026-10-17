@@ -8,7 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// Using standard library to test health handler
+// unit test for health handler
 func TestHealth(t *testing.T) {
 	// Create Echo instance
 	e := echo.New()
@@ -20,18 +20,13 @@ func TestHealth(t *testing.T) {
 		nil,
 	)
 
-	// 3. Create response recorder
 	rec := httptest.NewRecorder()
-
-	// 4. Create Echo context
 	c := e.NewContext(req, rec)
-
-	// 5. Call Health handler
 	if err := Health(c); err != nil {
 		t.Fatalf("Health returned an error: %v", err)
 	}
 
-	// status code
+	// check status code
 	if rec.Code != http.StatusOK {
 		t.Errorf(
 			"expected status 200, got %d",
@@ -39,7 +34,7 @@ func TestHealth(t *testing.T) {
 		)
 	}
 
-	// Check content type
+	// Check content type / header 
 	if got := rec.Header().Get("Content-Type"); got != echo.MIMEApplicationJSON {
 		t.Errorf(
 			"expected JSON content type, got %q",

@@ -8,9 +8,11 @@ import (
 )
 
 func main() {
+
+	// Create Echo instance
 	e := echo.New()
 
-	// Register health route.
+	// Register route.
 	e.GET("/api/health", handler.Health)
 
 	// Start HTTP server.
