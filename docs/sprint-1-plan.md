@@ -1,7 +1,9 @@
 # Sprint 1 — Vue 3 + Go Echo Application Framework Scaffold
 
 **Module:** #1 — Major: framework for frontend **and** backend (2 pts)
-**Jira:** FT-26, FT-28, FT-29, FT-34
+**Jira parent:** FT-3 (Story, High priority, assignee: Jiyan Wang)
+**Jira sprint:** Sprint 1 · Foundation (D1–7)
+**Jira planned duration:** D1–2 (Week 1, Days 1–2)
 **Stack:** Vue 3 + TypeScript + Vite frontend; Go + Echo backend; native JSON WebSocket
 **Branch:** `FT-3-sprint-1-vue-3-go`
 
@@ -294,8 +296,8 @@ lint:      golangci-lint run && npm run lint --prefix packages/web
 
 | Step | Task | Est. hours |
 |------|------|------------|
-| 1 | Scaffold `packages/web/` (Vite + Vue 3 + TS + Tailwind) | 1–2 |
-| 2 | Define `src/types/protocol.ts` + `src/lib/ws.ts` | 1 |
+| 1 | Scaffold `packages/web/` (Vite + Vue 3 + TS + Tailwind) | **Done** |
+| 2 | Define `src/types/protocol.ts` + `src/lib/ws.ts` | **Done** |
 | 3 | Build `GameCanvas.vue`, `GameView.vue`, `HomeView.vue` | 3–4 |
 | 4 | Scaffold Go WebSocket handler + room management | 3–4 |
 | 5 | Implement `game/engine.go` (pure step function) | 2–3 |
@@ -311,14 +313,34 @@ lint:      golangci-lint run && npm run lint --prefix packages/web
 
 ---
 
+## Progress log
+
+| Date | Step | Status |
+|------|------|--------|
+| Oct 19 | Step 1 — Scaffold `packages/web/` (Vite + Vue 3 + TS + Tailwind) | Done |
+| Oct 19 | Step 2 — `src/types/protocol.ts` + `src/lib/ws.ts` (in `stores/game.ts`) | Done |
+
+**What exists now:** `packages/web/` has Vite + Vue 3 + TS + Tailwind + Pinia + Vue Router, with protocol types, game store, Home/Game views, and Vite proxy config for `/api` and `/ws`.
+
+**Next up:** Step 3 (`GameCanvas.vue` — canvas renderer) or Step 4 (Go WebSocket handler + rooms).
+
+> **Jira timeline:** FT-3 is planned for **D1–2** of Sprint 1 (the sprint runs D1–7). The scaffold must be done by end of Day 2, leaving D3–7 for the remaining subtasks (FT-28, FT-29, FT-34) and the sprint goal of an online Pong room demo.
+
+---
+
 ## Jira ticket mapping
 
-| Ticket | Scope | Status |
-|--------|-------|--------|
-| **FT-26** | `/api/health` + protocol doc | Done |
-| **FT-28** | WS upgrade + `game:create` / `game:join` / disconnect | Pending |
-| **FT-29** | `game:input` validation + `game:state` broadcast | Pending |
-| **FT-34** | Server game loop + physics | Pending |
+**Parent:** FT-3 — Sprint 1 · Vue 3 + Go Echo application framework scaffold (2 pts planned)
+
+| Ticket | Title | Scope | Status |
+|--------|-------|-------|--------|
+| **FT-3** | Sprint 1 scaffold (parent) | Overall framework + 2 pts module | In Arbeit |
+| **FT-25** | D1–2 Vue/Vite/Tailwind app setup | Frontend scaffold | To do |
+| **FT-26** | D1–2 Go Echo backend, REST health endpoint & JSON contracts | Backend scaffold | Done |
+| **FT-27** | D2 HTTPS reverse-proxy integration | Caddy TLS + proxy | To do |
+| **FT-28** | WS upgrade + `game:create` / `game:join` / disconnect | WebSocket rooms | Pending |
+| **FT-29** | `game:input` validation + `game:state` broadcast | Input + broadcast | Pending |
+| **FT-34** | Server game loop + physics | 60 Hz engine | Pending |
 
 ---
 
