@@ -1,23 +1,23 @@
-# Sprint 1 — Vue 3 + Go Echo Application Framework Scaffold
+# Sprint 1 — Vue 3 + Python FastAPI Application Framework Scaffold
 
 **Module:** #1 — Major: framework for frontend **and** backend (2 pts)
 **Jira parent:** FT-3 (Story, High priority, assignee: Jiyan Wang)
 **Jira sprint:** Sprint 1 · Foundation (D1–7)
 **Jira planned duration:** D1–2 (Week 1, Days 1–2)
-**Stack:** Vue 3 + TypeScript + Vite frontend; Go + Echo backend; native JSON WebSocket
-**Branch:** `FT-3-sprint-1-vue-3-go`
+**Stack:** Vue 3 + TypeScript + Vite frontend; Python + FastAPI backend; native JSON WebSocket
+**Branch:** `FT-3-sprint-1-vue-3-python`
 
 ---
 
 ## Context
 
-**Stack pivot:** The original `PLAN.md` describes React + NestJS + Socket.IO + Prisma. The team has pivoted to **Vue 3 + TypeScript + Vite** and **Go + Echo** with native JSON WebSocket, as documented in `docs/protocol.md`.
+**Current stack decision:** Vue 3 + TypeScript + Vite frontend; Python + FastAPI backend; native JSON WebSocket. This supersedes the original stack draft in `PLAN.md` and is documented in `docs/protocol.md`.
 
 **What exists today:**
-- Go Echo server with only `GET /api/health` (`packages/server/cmd/server/main.go`)
-- Empty `packages/web/` directory (no frontend code at all)
-- No Docker Compose, no Dockerfiles, no CI, no Vite config
-- `.env.example` and `Makefile` still reference the old NestJS/Prisma stack
+- Python FastAPI server with only `GET /api/health` (`packages/server/app/main.py`)
+- Vue 3 + Vite frontend scaffold in `packages/web/`
+- No Docker Compose, Dockerfiles, CI, or database integration yet
+- `.env.example` and `Makefile` now use Python backend commands
 
 **What Sprint 1 delivers:** A working 1v1 remote Pong prototype — two browsers, one match, server-authoritative game loop.
 
@@ -111,100 +111,70 @@ export interface GameStateSnapshot {
 
 ---
 
-## Workstream B — Backend Scaffold (Go + Echo)
+## Workstream B — Backend Scaffold (Python + FastAPI)
 
 ### B1. Project structure
 
-```
 packages/server/
-├── go.mod
-├── go.sum
-├── cmd/server/
-│   └── main.go
-├── internal/
-│   ├── handler/
-│   │   ├── health.go
-│   │   └── ws.go
-│   ├── game/
-│   │   ├── engine.go
-│   │   ├── state.go
-│   │   ├── room.go
-│   │   ├── loop.go
-│   │   └── engine_test.go
-│   ├── protocol/
-│   │   ├── message.go
-│   │   ├── validate.go
-│   │   └── errors.go
-│   └── hub/
-│       └── hub.go
-```
+    requirements.txt
+    requirements-dev.txt
+    app/
+        __init__.py
+        main.py
+    tests/
+        test_health.py
 
-**Go dependencies:** `github.com/labstack/echo/v4`, `github.com/gorilla/websocket`, `github.com/google/uuid`
+Runtime dependencies: fastapi, uvicorn[standard].
+Development dependencies: pytest, httpx, ruff, mypy.
 
-### B2. WebSocket endpoint (`handler/ws.go`)
+### B2. Health endpoint (app/main.py)
 
-- `GET /ws/game` → upgrade via `gorilla/websocket`
-- Read loop: parse JSON envelope, route by `type`
-- Write loop: send messages from per-connection channel
-- On disconnect: broadcast `game:player_left`, cleanup room
+- GET /api/health returns HTTP 200 and {"status":"ok","service":"pong-api"}.
+- Read API_HOST and API_PORT from the environment; local default port is 3000.
+- This is a liveness check. Database readiness belongs to later work.
 
-### B3. Room management (`game/room.go`)
+### B3. WebSocket endpoint (app/websocket.py, planned)
 
-- Room: 6-char alphanumeric ID, 2 player seats, game state, status
-- **Create:** generate ID, assign p1, status = WAITING
-- **Join:** validate room exists + not full, assign p2, status = PLAYING
-- **Leave/disconnect:** broadcast `game:player_left`, cleanup
+- GET /ws/game accepts a native WebSocket connection.
+- Read UTF-8 JSON envelopes with type and payload.
+- Validate inbound payloads with Pydantic models.
+- Reject malformed JSON safely and avoid concurrent writes to a connection.
 
-### B4. Game engine (`game/engine.go`)
+### B4. Room management (app/game/room.py, planned)
 
-```go
-type GameState struct {
-    Tick    int64
-    Status  string             // WAITING | PLAYING | PAUSED | FINISHED
-    Ball    Ball
-    Paddles map[string]Paddle
-    Scores  map[string]int
-}
+- Room: 6-character alphanumeric ID, two player seats, game state, and status.
+- Create: generate ID, assign p1, set status to WAITING.
+- Join: validate room existence and capacity, assign p2, set status to PLAYING.
+- Leave/disconnect: broadcast game:player_left and clean up the room.
 
-type InputFrame struct {
-    Seq int64
-    Dir int // -1 up, 0 stationary, 1 down
-}
+### B5. Game engine (app/game/engine.py, planned)
 
-func Step(state GameState, inputs map[string]InputFrame, dt float64) GameState
-```
+    from dataclasses import dataclass
 
-- Pure function: paddle movement, wall bounce, paddle bounce, scoring, ball reset
-- Deterministic: no `math/rand` — use fixed seed or initial velocity
+    @dataclass(frozen=True)
+    class InputFrame:
+        seq: int
+        direction: int  # -1 up, 0 stationary, 1 down
 
-### B5. Game loop (`game/loop.go`)
+    def step(state, inputs, dt_seconds):
+        'Pure deterministic update; no I/O or wall-clock access.'
+        ...
 
-- Per-room goroutine, 60 Hz (`time.Ticker` at 16.67ms)
-- Accumulator pattern for fixed timestep
-- Collect latest input per player per tick
-- Broadcast `game:state` at 20 Hz (every 3rd tick)
-- Snapshot includes: tick, status, ball, paddles, scores
+- Keep physics independent from FastAPI and the WebSocket layer.
+- Avoid unseeded randomness so engine results are reproducible.
 
-### B6. Protocol validation (`protocol/validate.go`)
+### B6. Game loop (app/game/loop.py, planned)
 
-| Error code | When |
-|---|---|
-| `INVALID_JSON` | Message is not valid JSON |
-| `UNKNOWN_TYPE` | `type` is not a known message type |
-| `INVALID_PAYLOAD` | Payload shape is wrong for the type |
-| `ROOM_NOT_FOUND` | Room ID does not exist |
-| `ROOM_FULL` | Room already has 2 players |
-| `NOT_IN_ROOM` | Sender is not a player in the room |
-| `INVALID_INPUT` | `seq` or `dir` is out of range |
+- Run a per-room asyncio task at 60 Hz with a fixed timestep.
+- Collect the latest input per player per tick.
+- Broadcast game:state at 20 Hz (every third tick).
+- Cancel the task and clean up safely when a room ends.
 
-### B7. Tests (`game/engine_test.go`)
+### B7. Protocol validation and tests (planned)
 
-- 10,000 ticks from fixed state with scripted inputs
-- Assert final state hash equals checked-in constant
-- Assert replaying same inputs produces identical hash
-- Assert no NaN or Infinity values
-
----
+Validate docs/protocol.md cases: INVALID_JSON, UNKNOWN_TYPE, INVALID_PAYLOAD,
+ROOM_NOT_FOUND, ROOM_FULL, NOT_IN_ROOM, and INVALID_INPUT. Use pytest for the
+backend, covering the health response and future features as they are implemented.
 
 ## Workstream C — Infrastructure
 
@@ -249,15 +219,15 @@ volumes:
 
 ### C2. Dockerfiles
 
-- `packages/server/Dockerfile` — `golang:1.26-alpine` build, `distroless/static` run
+- `packages/server/Dockerfile` — `python:3.12-slim` build, `distroless/static` run
 - `packages/web/Dockerfile` — `node:22-alpine` build, `nginx:alpine` serve + proxy `/api` and `/ws`
 
 ### C3. CI (`.github/workflows/ci.yml`)
 
-- **Lint:** `golangci-lint` (Go), `eslint` + `prettier` (Vue)
-- **Typecheck:** `go vet ./...`, `vue-tsc --noEmit`
-- **Test:** `go test ./...`, `vitest run`
-- **Build:** `go build ./...`, `vite build`
+- **Lint:** `ruff` (Python), `eslint` + `prettier` (Vue)
+- **Typecheck:** `mypy`, `vue-tsc --noEmit`
+- **Test:** `python -m pytest`, `vitest run`
+- **Build:** `python -m compileall`, `vite build`
 
 ### C4. `.env.example` (updated)
 
@@ -286,8 +256,8 @@ up:        docker compose up --build -d
 down:      docker compose down
 build:     docker compose build
 logs:      docker compose logs -f
-test:      go test ./... && npm run test --prefix packages/web
-lint:      golangci-lint run && npm run lint --prefix packages/web
+test:      python -m pytest && npm run test --prefix packages/web
+lint:      ruff run && npm run lint --prefix packages/web
 ```
 
 ---
@@ -299,11 +269,11 @@ lint:      golangci-lint run && npm run lint --prefix packages/web
 | 1 | Scaffold `packages/web/` (Vite + Vue 3 + TS + Tailwind) | **Done** |
 | 2 | Define `src/types/protocol.ts` + `src/lib/ws.ts` | **Done** |
 | 3 | Build `GameCanvas.vue`, `GameView.vue`, `HomeView.vue` | 3–4 |
-| 4 | Scaffold Go WebSocket handler + room management | 3–4 |
-| 5 | Implement `game/engine.go` (pure step function) | 2–3 |
-| 6 | Implement `game/loop.go` (60 Hz tick + broadcast) | 2 |
+| 4 | Scaffold Python WebSocket handler + room management | 3–4 |
+| 5 | Implement `app/game/engine.py` (pure step function) | 2–3 |
+| 6 | Implement `app/game/loop.py` (60 Hz tick + broadcast) | 2 |
 | 7 | Protocol validation + error codes | 1 |
-| 8 | Go tests (engine determinism) | 1 |
+| 8 | Python tests (engine determinism) | 1 |
 | 9 | Wire frontend WS client to backend | 1–2 |
 | 10 | Docker Compose + Dockerfiles + CI | 2–3 |
 | 11 | Update `.env.example`, Makefile, README | 1 |
@@ -322,7 +292,7 @@ lint:      golangci-lint run && npm run lint --prefix packages/web
 
 **What exists now:** `packages/web/` has Vite + Vue 3 + TS + Tailwind + Pinia + Vue Router, with protocol types, game store, Home/Game views, and Vite proxy config for `/api` and `/ws`.
 
-**Next up:** Step 3 (`GameCanvas.vue` — canvas renderer) or Step 4 (Go WebSocket handler + rooms).
+**Next up:** Step 3 (`GameCanvas.vue` — canvas renderer) or Step 4 (Python WebSocket handler + rooms).
 
 > **Jira timeline:** FT-3 is planned for **D1–2** of Sprint 1 (the sprint runs D1–7). The scaffold must be done by end of Day 2, leaving D3–7 for the remaining subtasks (FT-28, FT-29, FT-34) and the sprint goal of an online Pong room demo.
 
@@ -330,13 +300,13 @@ lint:      golangci-lint run && npm run lint --prefix packages/web
 
 ## Jira ticket mapping
 
-**Parent:** FT-3 — Sprint 1 · Vue 3 + Go Echo application framework scaffold (2 pts planned)
+**Parent:** FT-3 — Sprint 1 · Vue 3 + Python FastAPI application framework scaffold (2 pts planned)
 
 | Ticket | Title | Scope | Status |
 |--------|-------|-------|--------|
 | **FT-3** | Sprint 1 scaffold (parent) | Overall framework + 2 pts module | In Arbeit |
 | **FT-25** | D1–2 Vue/Vite/Tailwind app setup | Frontend scaffold | To do |
-| **FT-26** | D1–2 Go Echo backend, REST health endpoint & JSON contracts | Backend scaffold | Done |
+| **FT-26** | D1–2 Python FastAPI backend, REST health endpoint & JSON contracts | Backend scaffold | Done |
 | **FT-27** | D2 HTTPS reverse-proxy integration | Caddy TLS + proxy | To do |
 | **FT-28** | WS upgrade + `game:create` / `game:join` / disconnect | WebSocket rooms | Pending |
 | **FT-29** | `game:input` validation + `game:state` broadcast | Input + broadcast | Pending |
@@ -361,8 +331,8 @@ Per `PLAN.md` §6.4 — all six must pass:
 
 | Risk | Mitigation |
 |------|-------------|
-| WebSocket proxy in dev (Vite → Go) | Vite `server.proxy` for `/ws` → `ws://localhost:3000` |
+| WebSocket proxy in dev (Vite → Python) | Vite `server.proxy` for `/ws` → `ws://localhost:3000` |
 | Canvas render performance at 60fps | `requestAnimationFrame`, not Vue reactivity, for ball/paddle |
-| Echo + gorilla/websocket compatibility | `e.GET("/ws/game", ...)` with `websocket.Upgrader` handler |
-| Message type drift between Go/TS | Single source of truth: `docs/protocol.md`, review checklist |
+| FastAPI WebSocket lifecycle and disconnect handling | `e.GET("/ws/game", ...)` with `websocket.Upgrader` handler |
+| Message type drift between Python/TS | Single source of truth: `docs/protocol.md`, review checklist |
 | Stack pivot leaves stale docs | Update PLAN.md, README.md, .env.example, Makefile together |

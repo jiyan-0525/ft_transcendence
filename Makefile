@@ -24,24 +24,23 @@ build: ## Build images without starting
 logs: ## Tail logs from all services
 	$(COMPOSE) logs -f
 
-seed: ## Reset and seed the database with demo users
-	$(COMPOSE) exec api npx prisma migrate reset --force --skip-generate
-	$(COMPOSE) exec api npm run seed
+seed: ## Seed demo users (not implemented yet)
+	@echo Database seeding is not implemented yet.
 
-migrate: ## Run pending database migrations
-	$(COMPOSE) exec api npx prisma migrate deploy
+migrate: ## Run database migrations (not implemented yet)
+	@echo Database migrations are not implemented yet.
 
-test: ## Run the full test suite
-	$(COMPOSE) exec api npm run test
-	$(COMPOSE) exec web npm run test
+test: ## Run backend and frontend tests
+	python -m pytest packages/server/tests
+	npm --prefix packages/web run test
 
-lint: ## Lint server and web
-	$(COMPOSE) exec api npm run lint
-	$(COMPOSE) exec web npm run lint
+lint: ## Lint Python backend and Vue frontend
+	python -m ruff check packages/server
+	npm --prefix packages/web run lint
 
-typecheck: ## Type-check server and web
-	$(COMPOSE) exec api npm run typecheck
-	$(COMPOSE) exec web npm run typecheck
+typecheck: ## Type-check Python backend and Vue frontend
+	python -m mypy packages/server/app
+	npm --prefix packages/web run typecheck
 
 smoke: ## Run the Playwright smoke test and fail on any console warning
 	$(COMPOSE) exec web npm run test:e2e

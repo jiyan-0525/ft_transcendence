@@ -1,11 +1,11 @@
 # ft_transcendence — Multiplayer Pong Arena
 
-Real-time multiplayer Pong: play live 1v1 matches with opponents on other machines,
-3+ free-for-all battles, tournaments with brackets, and an AI opponent. Built with
-React, NestJS, Socket.IO, PostgreSQL and Docker.
+Real-time multiplayer Pong with a Vue 3 client and a Python FastAPI backend.
+The current scaffold includes the Vue/Vite frontend and GET /api/health. WebSocket
+gameplay, rooms, PostgreSQL persistence, and deployment are planned, not implemented.
 
-> **Status:** W0 — pre-kickoff. Module claims are locked; this README is completed
-> week by week as the project is built.
+> **Status:** Sprint 1 foundation. The stack below reflects the current Vue + Python
+> decision; module claims still require end-to-end implementation.
 
 ---
 
@@ -31,7 +31,7 @@ responsibility. Documented here as required by the spec.
 |---|---|---|---|
 | **A** | Product Owner + Developer | Product vision, backlog and prioritisation; validates finished work; evaluator contact; auth, profile, friends, presence | 9 |
 | **B** | Technical Lead / Architect + Developer | Architecture and stack decisions; engine, realtime gateway, Docker/HTTPS/CI; reviews critical changes | 1, 2, 4, 5, 6 |
-| **C** | Project Manager / Scrum Master + Developer | Meetings and planning; progress and risk tracking; React app, renderer, i18n, accessibility, legal pages | 3, S2, S3 |
+| **C** | Project Manager / Scrum Master + Developer | Meetings and planning; progress and risk tracking; Vue app, renderer, i18n, accessibility, legal pages | 3, S2, S3 |
 | **D** | Developer + QA owner | Tournaments, AI opponent, game customization, statistics; owns the test suite and demo rehearsal | 7, 8, 10, S1 |
 
 Every module is developed by its owner and tested by a different member.
@@ -47,7 +47,7 @@ All PRs require one approving review from a non-author.
 |---|---|---|---|---|---|---|
 | 1 | Web | Major — framework for frontend and backend | 2 | B | Open the app, use the UI, inspect the network tab | ⬜ |
 | 2 | Web | Major — real-time features with WebSockets | 2 | B | Open two browsers, move a paddle, watch the other update | ⬜ |
-| 3 | Web | Minor — ORM | 1 | C | `npx prisma migrate dev`, show `schema.prisma` and the relations | ⬜ |
+| 3 | Web | Minor — ORM | 1 | C | Show the selected ORM schema and relations once persistence is implemented | ⬜ |
 | 4 | Gaming | Major — complete web-based game | 2 | B | Start a 1v1 match, score points to 11 | ⬜ |
 | 5 | Gaming | Major — remote players | 2 | B+D | Two laptops on the same network, play live; kill the Wi-Fi and reconnect | ⬜ |
 | 6 | Gaming | Major — multiplayer 3+ | 2 | B+D | Create a room, join with 3 browsers, play a free-for-all | ⬜ |
@@ -67,13 +67,13 @@ Per-module demo scripts live in [`docs/module-claims.md`](docs/module-claims.md)
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18, TypeScript, Vite, Tailwind CSS, Zustand |
-| Backend | NestJS (Fastify adapter), Socket.IO |
-| Database | PostgreSQL 16 with Prisma ORM |
+| Frontend | Vue 3, TypeScript, Vite, Tailwind CSS, Pinia |
+| Backend | Python 3.12+, FastAPI, Uvicorn |
+| Database | PostgreSQL 16 (integration and ORM planned) |
 | Auth | argon2id password hashing, JWT access + rotating refresh tokens |
-| Realtime | WebSockets (Socket.IO) with client-side interpolation |
+| Realtime | Native JSON WebSocket protocol (implementation planned) |
 | Infrastructure | Docker Compose, Caddy (automatic HTTPS) |
-| Testing | Vitest, Supertest, Playwright (smoke) |
+| Testing | pytest (backend), Vitest (frontend); Playwright planned |
 
 ---
 
@@ -83,7 +83,7 @@ The server is **fully authoritative**: clients send only input intents
 (`{ seq, direction }`) and render interpolated snapshots. They cannot send
 positions, scores or outcomes.
 
-The game logic lives in **one pure, deterministic, I/O-free module** —
+The planned game logic will live in **one pure, deterministic, I/O-free module** —
 `step(state, inputs, dt) → state` — driven by a fixed 60 Hz server loop that
 broadcasts 20 Hz snapshots. The same engine serves the 1v1 match, the 3+
 free-for-all, and the AI opponent (the AI is just another input producer), which
@@ -91,9 +91,9 @@ keeps physics identical for every participant and lets us test 10 000 ticks in
 under a second.
 
 ```
-Browser (React)  ──HTTPS/REST──▶  NestJS API  ──▶  PostgreSQL
-       │                              │
-       └──────────WSS────────▶  Socket.IO gateways
+Browser (Vue 3)  ──HTTP/REST──▶  FastAPI  ──▶  PostgreSQL (planned)
+       │                           │
+       └──────────WS────────▶  Native WebSocket endpoint (planned)
                                       │
                                  GameService (60 Hz)
                                       │
@@ -110,28 +110,37 @@ strategy and risk register: [`PLAN.md`](PLAN.md).
 ### Prerequisites
 
 - Docker and Docker Compose
-- Node.js 20+ (only needed to run the apps outside Docker)
+- Python 3.12+ and Node.js 20+ (to run the backend and frontend locally)
 
-### Run the whole stack
+### Run the current scaffold locally
+
+Backend, from the repository root:
 
 ```bash
-git clone <repository-url>
-cd transcendence
-cp .env.example .env      # then edit the values
-docker compose up --build
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r packages/server/requirements-dev.txt
+cd packages/server
+python -m app.main
 ```
 
-The app is served over HTTPS at `https://localhost:3000`
-(development over plain HTTP at `http://localhost:8080`).
+Frontend, from a second terminal at the repository root:
+
+```bash
+npm --prefix packages/web install
+npm --prefix packages/web run dev
+```
+
+The backend listens on http://localhost:3000; Vite serves the frontend on
+http://localhost:8080 and proxies /api and /ws. Docker Compose, PostgreSQL
+integration, and WebSocket gameplay are not implemented yet.
 
 ### Useful commands
 
 ```bash
-make up          # start the stack
-make down        # stop the stack
-make seed        # reset and seed the database with demo users
-make logs        # tail all service logs
-make test        # run the full test suite
+make test        # run pytest and the frontend Vitest suite
+make lint        # run Ruff and the frontend linter
+make typecheck   # run mypy and Vue type checking
 ```
 
 ### Environment variables
@@ -160,15 +169,13 @@ demonstrates genuine, balanced contribution. Branch protection is enabled on
 
 ```
 transcendence/
-├── docker-compose.yml
 ├── .env.example
 ├── Makefile
 ├── PLAN.md                    # project plan, milestones, risks
 ├── docs/                      # architecture, module claims, decision records
 └── packages/
-    ├── shared/                # shared types, zod schemas, game constants
-    ├── server/                # NestJS API, Socket.IO gateways, Prisma
-    └── web/                   # React frontend
+    ├── server/                # Python FastAPI backend
+    └── web/                   # Vue 3 frontend
 ```
 
 ---

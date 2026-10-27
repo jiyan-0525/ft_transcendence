@@ -2,7 +2,7 @@
 
 **Jira:** FT-26, FT-28, FT-29, FT-34  
 **Status:** Draft — agree with Frontend Owner before implementing rooms  
-**Stack:** Vue 3 + TypeScript frontend; Go + Echo backend; native JSON WebSocket
+**Stack:** Vue 3 + TypeScript frontend; Python + FastAPI backend; native JSON WebSocket
 
 ## 1. Scope
 
@@ -125,9 +125,9 @@ Initial error codes: `INVALID_JSON`, `UNKNOWN_TYPE`, `INVALID_PAYLOAD`, `ROOM_NO
 
 ## 6. Backend/frontend contract mapping
 
-- Go backend: define Go `struct` types with explicit `json` tags and validate inbound data.
+- Python backend: define Pydantic models for message envelopes and payloads, then validate inbound data.
 - Vue frontend: define matching TypeScript interfaces in `packages/web/src/types/`.
-- No Go code imports TypeScript, and the old `packages/shared/src/index.ts` design is not used.
+- Keep Python and TypeScript types aligned through this protocol document; no runtime cross-language imports are needed.
 - Keep message examples and field names aligned with this document. Any changes to message shapes require review from both backend and frontend owners.
 
 ## 7. Sprint milestones
