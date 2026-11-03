@@ -1,147 +1,332 @@
-# Pong Client–Server Protocol (Draft v0.1)
+# Client–Server Protocol (Draft v0.2)
 
-**Jira:** FT-26, FT-28, FT-29, FT-34  
-**Status:** Draft — agree with Frontend Owner before implementing rooms  
-**Stack:** Vue 3 + TypeScript frontend; Go + Echo backend; native JSON WebSocket
+**Status:** draft — Week 1 contract. Only `GET /api/health` is implemented today;
+the rest is the agreed target for Weeks 2–5. Change this document before changing
+the Go handlers or the Vue client.
+
+**Stack:** Vue 3 + TypeScript frontend; Go + Echo backend; PostgreSQL; native JSON
+WebSocket.
+
+---
 
 ## 1. Scope
 
-This document defines the **minimum Sprint 1** browser/backend contract for a two-player remote Pong prototype. It does not claim that the WebSocket handlers, auth, reconnection, tournaments, or spectator mode have been implemented.
+- REST for ordinary reads and writes: accounts, profiles, friends, communities,
+  content, events, marketplace, search, uploads and administration.
+- One authenticated WebSocket for chat, notifications and presence.
+- PostgreSQL is the authoritative store. A WebSocket frame is never the only
+  record of a message or notification.
 
-REST is used for ordinary account/data operations. The first implemented REST endpoint is `GET /api/health`. Real-time room actions and game snapshots will use a single native WebSocket connection.
+---
 
-## 2. HTTP
+## 2. Conventions
 
-### `GET /api/health`
+### 2.1 Content type
 
-**Response:** HTTP `200`, `Content-Type: application/json`
+All requests and responses are UTF-8 JSON unless they are file uploads or file
+downloads.
 
-```json
-{"status":"ok","service":"pong-api"}
-```
+### 2.2 Authentication
 
-This is a **liveness** check only; it does not yet verify the database, WebSocket health, or other dependencies.
+The browser authenticates with an HTTP-only session cookie issued at login. The
+session is checked on every REST request and during the WebSocket handshake.
+Access tokens, if used for non-browser clients, are sent as
+`Authorization: Bearer <token>`.
 
-## 3. WebSocket connection
+Clients never send a user ID to identify themselves for authorisation. The server
+derives identity from the session.
 
-**Proposed endpoint:** `GET /ws/game` (WebSocket upgrade; `ws://` locally, `wss://` behind HTTPS). Final origin/port and authentication will be decided alongside FT-28 and FT-50.
-
-Each WebSocket text message is UTF-8 JSON with an envelope:
-
-```json
-{"type":"game:input","payload":{"seq":1,"dir":-1}}
-```
-
-- `type`: required string identifying the message.
-- `payload`: required JSON object.
-- Unknown message types or invalid JSON must be rejected safely, never crash the server.
-- The server is authoritative. Clients never submit ball coordinates, paddle coordinates, scores, or match winners.
-- Sprint 1 targets 1v1 rooms only (two player seats).
-
-## 4. Client → Server messages
-
-### `game:create`
-
-```json
-{"type":"game:create","payload":{}}
-```
-
-Requests creation of a new 1v1 room.
-
-### `game:join`
-
-```json
-{"type":"game:join","payload":{"roomId":"ABCD12"}}
-```
-
-Requests joining an existing room. `roomId` is a server-issued identifier. The server validates existence and capacity.
-
-### `game:input`
-
-```json
-{"type":"game:input","payload":{"seq":1,"dir":-1}}
-```
-
-- `seq`: non-negative monotonically increasing integer for this player's input stream.
-- `dir`: `-1` up, `0` stationary, `1` down.
-- Only an assigned player may control their own paddle. The server determines player identity from the connection/seat, not an untrusted user-supplied player ID.
-- The server rejects invalid directions and stale/duplicate sequences.
-
-## 5. Server → Client messages
-
-### `game:created`
-
-```json
-{"type":"game:created","payload":{"roomId":"ABCD12","playerId":"p1"}}
-```
-
-Acknowledges room creation and assigns the first player's seat.
-
-### `game:joined`
-
-```json
-{"type":"game:joined","payload":{"roomId":"ABCD12","playerId":"p2"}}
-```
-
-Acknowledges a successful join and assigns the second player's seat.
-
-### `game:state`
+### 2.3 Errors
 
 ```json
 {
-  "type":"game:state",
-  "payload":{
-    "roomId":"ABCD12",
-    "tick":42,
-    "status":"PLAYING",
-    "ball":{"x":0.5,"y":0.4},
-    "paddles":{"p1":{"y":0.3},"p2":{"y":0.7}},
-    "scores":{"p1":2,"p2":1}
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "You are not a member of this community.",
+    "requestId": "req_01J..."
   }
 }
 ```
 
-- Coordinates are normalised to the `0.0`–`1.0` game area for resolution-independent Canvas rendering.
-- `tick`: non-negative server simulation counter.
-- `status`: `WAITING`, `PLAYING`, `PAUSED`, or `FINISHED`.
-- Only the server computes and broadcasts authoritative ball/paddle positions and scores.
-- This is the **minimum** snapshot. Velocity, interpolation timestamps, power-ups, and additional game modes are deferred until needed.
+Stable codes: `INVALID_PAYLOAD`, `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`,
+`CONFLICT`, `RATE_LIMITED`, `INTERNAL`.
 
-### `game:player_left`
+### 2.4 Pagination
 
-```json
-{"type":"game:player_left","payload":{"roomId":"ABCD12","playerId":"p2"}}
-```
-
-Broadcast when a player disconnects or leaves. Sprint 1 only needs disconnect detection; seat reservation and recovery belong to Sprint 2.
-
-### `game:error`
+Cursor pagination for feeds, messages and notifications:
 
 ```json
-{"type":"game:error","payload":{"code":"ROOM_FULL","message":"Room already has two players"}}
+{
+  "items": [],
+  "nextCursor": "eyJpZCI6IjEyMyJ9",
+  "hasMore": true
+}
 ```
 
-Initial error codes: `INVALID_JSON`, `UNKNOWN_TYPE`, `INVALID_PAYLOAD`, `ROOM_NOT_FOUND`, `ROOM_FULL`, `NOT_IN_ROOM`, `INVALID_INPUT`.
+Limit is capped server-side (default 20, maximum 100). Invalid cursors return
+`INVALID_PAYLOAD`.
 
-## 6. Backend/frontend contract mapping
+### 2.5 Validation
 
-- Go backend: define Go `struct` types with explicit `json` tags and validate inbound data.
-- Vue frontend: define matching TypeScript interfaces in `packages/web/src/types/`.
-- No Go code imports TypeScript, and the old `packages/shared/src/index.ts` design is not used.
-- Keep message examples and field names aligned with this document. Any changes to message shapes require review from both backend and frontend owners.
+Every payload is validated on the server: required fields, lengths, enum values,
+IDs, file type and file size. Client validation is for usability only.
 
-## 7. Sprint milestones
+---
 
-- **FT-26 (now):** document the HTTP response and proposed JSON/WebSocket contract; `/api/health` implemented and tested.
-- **FT-28:** implement WebSocket upgrade and `game:create` / `game:join` / disconnect.
-- **FT-29:** implement `game:input` validation and `game:state` broadcasting.
-- **FT-34:** wire server-owned game loop and physics to state snapshots.
-- **Sprint 2:** authentication-linked reconnection, richer state protocol, latency improvements.
+## 3. Health
 
-## 8. Open decisions
+### `GET /api/health`
 
-1. Whether to use opaque room IDs or short alphanumeric share codes (the examples use `roomId`).
-2. WebSocket authentication and reconnect identity (coordinate with FT-50 and Sprint 2).
-3. Exact room/game state transitions and countdown/start handshake.
-4. Snapshot frequency, input rate limits, and maximum message size.
-5. HTTP health/readiness split for Docker and database checks.
+**Response:** `200 application/json`
+
+```json
+{ "status": "ok", "service": "community-api" }
+```
+
+This is a liveness check. Dependency health (database, storage, WebSocket hub)
+belongs on the status endpoint added in a later week.
+
+---
+
+## 4. Authentication
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/api/auth/register` | Create an account (email, username, password) |
+| `POST` | `/api/auth/login` | Email/password login; sets the session cookie |
+| `POST` | `/api/auth/logout` | Revoke the current session |
+| `POST` | `/api/auth/refresh` | Rotate a refresh credential |
+| `GET` | `/api/auth/me` | Current user, roles and session metadata |
+| `GET` | `/api/auth/oauth/:provider/start` | Begin OAuth 2.0 authorisation |
+| `GET` | `/api/auth/oauth/:provider/callback` | Complete OAuth and create/link the account |
+| `POST` | `/api/auth/oauth/:provider/link` | Link a provider to an existing account |
+| `DELETE` | `/api/auth/oauth/:provider` | Unlink a provider |
+
+Passwords are hashed with argon2id or bcrypt. Raw passwords are never logged,
+stored or returned.
+
+---
+
+## 5. Users and friendships
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/users/:id` | Public profile, respecting visibility |
+| `PATCH` | `/api/users/me` | Update username, bio, locale |
+| `PUT` | `/api/users/me/avatar` | Upload or replace the avatar |
+| `DELETE` | `/api/users/me/avatar` | Reset to the default avatar |
+| `GET` | `/api/users/:id/content` | Published content by this user |
+| `GET` | `/api/friends` | Accepted friends |
+| `GET` | `/api/friends/requests` | Incoming and outgoing pending requests |
+| `POST` | `/api/friends/requests` | Send a request `{ "userId": "..." }` |
+| `POST` | `/api/friends/requests/:id/accept` | Accept |
+| `POST` | `/api/friends/requests/:id/reject` | Reject |
+| `DELETE` | `/api/friends/:userId` | Remove a friend |
+
+Friend requests are unique per pair and idempotent. Accepting a request creates
+the friendship in one transaction.
+
+---
+
+## 6. Communities
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/communities` | Browse/search communities |
+| `POST` | `/api/communities` | Create a community; caller becomes owner |
+| `GET` | `/api/communities/:id` | Community detail and membership |
+| `PATCH` | `/api/communities/:id` | Owner edits description, visibility |
+| `DELETE` | `/api/communities/:id` | Owner deletes the community |
+| `POST` | `/api/communities/:id/join` | Join |
+| `DELETE` | `/api/communities/:id/leave` | Leave (owner must transfer or delete) |
+| `GET` | `/api/communities/:id/members` | Member list |
+| `POST` | `/api/communities/:id/members` | Owner adds a member |
+| `DELETE` | `/api/communities/:id/members/:userId` | Owner removes a member |
+| `GET` | `/api/communities/:id/content` | Community-scoped feed |
+
+Community visibility is checked for every read and write. A non-member requesting
+a restricted community by ID receives `403` or `404` according to the visibility
+policy, not a partial response.
+
+---
+
+## 7. Content: feed, posts, articles, comments, reactions
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/feed` | Chronological feed; filters `all`, `friends`, `communities` |
+| `POST` | `/api/posts` | Create a post (text, images, visibility) |
+| `POST` | `/api/articles` | Create an article (title, summary, cover, Markdown, tags) |
+| `GET` | `/api/content/:id` | Read one item, subject to visibility |
+| `PATCH` | `/api/content/:id` | Author edits |
+| `DELETE` | `/api/content/:id` | Author (or platform moderator) deletes |
+| `POST` | `/api/content/:id/publish` | Move a draft to published |
+| `GET` | `/api/content/:id/comments` | Comment list |
+| `POST` | `/api/content/:id/comments` | Add a comment |
+| `DELETE` | `/api/comments/:id` | Author or moderator deletes |
+| `PUT` | `/api/content/:id/reactions/:kind` | Add a reaction (like, etc.) |
+| `DELETE` | `/api/content/:id/reactions/:kind` | Remove a reaction |
+
+Creating content may include `shareToFeed: true`. That choice controls whether the
+item appears in the unified feed; edits to a listing do not re-share it.
+
+---
+
+## 8. Events
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/events` | Upcoming events, filters by community and date |
+| `POST` | `/api/events` | Create an event |
+| `GET` | `/api/events/:id` | Event detail, attendee count and caller's RSVP |
+| `PATCH` | `/api/events/:id` | Organiser edits time, place, description or capacity |
+| `DELETE` | `/api/events/:id` | Organiser cancels the event |
+| `POST` | `/api/events/:id/rsvp` | RSVP `GOING` |
+| `DELETE` | `/api/events/:id/rsvp` | Cancel RSVP |
+| `GET` | `/api/events/:id/attendees` | Attendee list, subject to privacy |
+
+Status transitions: `UPCOMING → CANCELLED` or `UPCOMING → COMPLETED`. Capacity is
+enforced transactionally; the response is `409 CONFLICT` when no seat remains.
+Editing the time or place, or cancelling, notifies every attendee.
+
+---
+
+## 9. Marketplace
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/listings` | Browse with category, price, condition, status and cursor |
+| `POST` | `/api/listings` | Create a listing with images |
+| `GET` | `/api/listings/:id` | Listing detail |
+| `PATCH` | `/api/listings/:id` | Seller edits |
+| `DELETE` | `/api/listings/:id` | Seller deletes |
+| `POST` | `/api/listings/:id/status` | Set `AVAILABLE`, `RESERVED` or `SOLD` |
+| `POST` | `/api/listings/:id/contact` | Open a conversation with the seller |
+
+The first version has no payment, shipping, refund, order or review endpoints.
+`contact` creates a conversation and attaches the listing link.
+
+---
+
+## 10. Chat
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/conversations` | Conversations with unread counts |
+| `POST` | `/api/conversations` | Start a conversation with one user |
+| `GET` | `/api/conversations/:id/messages` | Paginated history (cursor) |
+| `POST` | `/api/conversations/:id/messages` | Persist a message and push it |
+| `POST` | `/api/conversations/:id/read` | Advance the read cursor |
+
+Only conversation members may read or write. The server derives the sender from
+the session.
+
+---
+
+## 11. Notifications
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/notifications` | Paginated notification centre |
+| `GET` | `/api/notifications/unread-count` | Badge count |
+| `POST` | `/api/notifications/:id/read` | Mark one read |
+| `POST` | `/api/notifications/read-all` | Mark all read |
+| `GET` | `/api/notifications/settings` | Per-type preferences |
+| `PATCH` | `/api/notifications/settings` | Update preferences |
+
+Triggers: friend request received/accepted, comment or reaction on owned content,
+added to/removed from a community, attended event modified/cancelled, and a new
+event in a followed community.
+
+---
+
+## 12. Search and media
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/search` | `q`, `type`, filters, sort, cursor |
+| `POST` | `/api/media` | Multipart upload; returns metadata and a signed/authorised URL |
+| `GET` | `/api/media/:id` | Download or stream with an access check |
+| `DELETE` | `/api/media/:id` | Delete an owned, unreferenced file |
+
+Search applies the same visibility rules as direct reads. Media access is checked
+per request; a URL alone is not authorisation.
+
+---
+
+## 13. Administration
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/admin/users` | List/search users (Admin, Moderator) |
+| `PATCH` | `/api/admin/users/:id/role` | Assign `USER`, `MODERATOR` or `ADMIN` (Admin only) |
+| `DELETE` | `/api/admin/users/:id` | Disable or delete an account (Admin only) |
+| `GET` | `/api/admin/content` | Moderation queue (Admin, Moderator) |
+| `POST` | `/api/admin/content/:id/hide` | Hide content (Admin, Moderator) |
+
+Regular users receive `403` for every admin route.
+
+---
+
+## 14. WebSocket
+
+### 14.1 Connection
+
+**Endpoint:** `GET /ws` (upgrade; `ws://` locally, `wss://` behind HTTPS).
+
+The handshake requires a valid session cookie. The server rejects unauthenticated
+upgrades with `401`. One connection per tab is normal; the hub tracks all sockets
+for a user and computes presence per user.
+
+### 14.2 Envelope
+
+```json
+{ "type": "chat:send", "payload": { "conversationId": "c1", "body": "Hi" } }
+```
+
+Both fields are required. Unknown types and invalid payloads are rejected with
+`ws:error` and never crash the hub.
+
+### 14.3 Client → server
+
+| Type | Payload | Notes |
+|---|---|---|
+| `chat:send` | `{ conversationId, body, clientId }` | Persisted before broadcast |
+| `chat:read` | `{ conversationId, messageId }` | Advance the read cursor |
+| `typing:start` / `typing:stop` | `{ conversationId }` | Ephemeral, not persisted |
+| `presence:subscribe` | `{ userIds }` | Friends or visible profiles only |
+| `notifications:ack` | `{ notificationId }` | Mark delivered/read according to the endpoint used |
+
+### 14.4 Server → client
+
+| Type | Payload | Notes |
+|---|---|---|
+| `chat:message` | `{ conversationId, message }` | Persisted message |
+| `chat:read` | `{ conversationId, userId, messageId }` | Read receipt |
+| `notification:new` | `{ notification }` | Persisted notification |
+| `presence:update` | `{ userId, online }` | Per-user presence |
+| `community:member_changed` | `{ communityId, userId, action }` | Optional live update |
+| `event:changed` | `{ eventId, action }` | Optional live update |
+| `ws:error` | `{ code, message }` | Invalid frame or forbidden action |
+
+### 14.5 Reconnect
+
+1. The client reconnects with the same session.
+2. It sends its last message cursor per conversation.
+3. The server returns rows after the cursor (or the client fetches them over REST).
+4. The client fetches the unread notification count.
+5. Presence is recomputed from active sockets.
+
+No message is lost because every message and notification is persisted before it
+is pushed.
+
+---
+
+## 15. Open decisions
+
+1. Session cookie versus bearer-only for the SPA; both may be supported.
+2. Final visibility policy for `COMMUNITY` content: `403` versus `404` for
+   non-members.
+3. Whether typing indicators and read receipts are in scope for Week 2 or Week 3.
+4. Signed media URLs versus authenticated streaming for large files.
+5. API versioning (`/api/v1`) before the first public demo.

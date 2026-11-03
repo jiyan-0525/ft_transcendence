@@ -1,205 +1,267 @@
 # Architecture
 
-Technical reference for Multiplayer Pong Arena. Strategy and scheduling live in
-[`../PLAN.md`](../PLAN.md); module evidence lives in
-[`module-claims.md`](module-claims.md).
+Technical reference for the Community & Content Platform. Product strategy and
+scheduling live in [`../PLAN.md`](../PLAN.md); module evidence lives in
+[`module-claims.md`](module-claims.md); decision records live in
+[`decisions/`](decisions/).
 
 ---
 
-## 1. Trust model
+## 1. System shape
 
-The server is fully authoritative. Clients send **input intents only** — never a
-position, a score, or an outcome. Consequences:
+The backend is a **modular monolith**: one Go service, one PostgreSQL database,
+and one deployable unit. Business capabilities are separated by package, not by
+network boundary.
 
-- Cheating a client is not possible without also cheating the server, and the
-  server has no client-supplied outcome to trust.
-- All participants — humans and the AI — are subject to identical physics.
-- Fairness in a 3+ free-for-all is a property of the system, not a promise.
-
----
-
-## 2. The game engine
-
-### 2.1 Contract
-
-`packages/shared` (or `packages/server/src/game/engine.ts`) exports a pure
-function. It imports nothing from NestJS, performs no I/O, starts no timers, and
-uses no `Math.random()` — randomness enters only through an injected seeded PRNG.
-
-```ts
-export type GameState = {
-  tick: number
-  ball: { x: number; y: number; vx: number; vy: number; spin: number }
-  paddles: Record<PlayerId, Paddle>
-  powerups: PowerUp[]
-  scores: Record<PlayerId, number>
-  config: GameConfig
-  status: 'COUNTDOWN' | 'PLAYING' | 'POINT' | 'OVER'
-}
-
-export type InputFrame = {
-  seq: number
-  dir: -1 | 0 | 1            // paddle direction only
-  buttons?: { powerup?: boolean }
-}
-
-export const step = (
-  state: GameState,
-  inputs: ReadonlyMap<PlayerId, InputFrame>,
-  dtMs: number,
-): GameState => { /* pure */ }
+```
+Browser (Vue 3 SPA)
+   │  HTTPS / REST                 WSS
+   ▼                                 ▼
+Caddy ──▶ Go + Echo API ──▶ PostgreSQL   WebSocket hub
+              │                              │
+              ├── auth / users / friends     ├── chat
+              ├── communities / content      ├── notifications
+              ├── events / marketplace       └── presence
+              ├── notifications / media
+              └── search
 ```
 
-Every rule that can change an outcome lives inside `step()`: paddle clamping, wall
-and paddle collision with angle control, ball-speed escalation, serve direction,
-scoring, point reset, power-up spawn/pickup/expiry, countdowns, and win detection.
-
-### 2.2 The loop
-
-`GameService` owns one `setInterval`-equivalent accumulator per room at a fixed
-**60 Hz**. Each tick it collects the latest `InputFrame` per player, calls `step()`,
-mutates nothing outside the state object, and increments `tick`. Bounces are
-detected by comparing state before and after `step()` so events can be emitted to
-the clients that need them.
-
-### 2.3 Determinism test (mandatory, in CI)
-
-`engine.spec.ts` runs 10 000 ticks from a fixed seed with a scripted input stream
-and asserts:
-
-1. the final state hash equals a checked-in constant,
-2. replaying the same inputs produces an identical hash,
-3. no value is ever `NaN` or `Infinity`.
-
-This is the regression net for desync. If it passes, the server and every client
-agree, because clients never simulate — they only interpolate what the server
-sent.
+Why not microservices: event capacity, community membership, content visibility,
+notifications and permissions often change together. A single database
+transaction is simpler and safer than a distributed saga at this scale. The
+package boundaries still let a domain move out later if it ever needs to.
 
 ---
 
-## 3. Network model
+## 2. Responsibilities
 
-| Concern | Value | Why |
+| Layer | Owns | Does not own |
 |---|---|---|
-| Tick rate | 60 Hz | Smooth paddle response, cheap to compute |
-| Snapshot rate | 20 Hz | 30 Hz of Pong is imperceptible; halves bandwidth |
-| Interpolation delay | 100 ms | Hides jitter and one-way latency |
-| Extrapolation cap | 250 ms | Avoids rubber-banding beyond that |
-| Clock sync | rolling median of `serverTime` offsets | Robust to a single slow sample |
-| Reconnect grace | 30 s | Long enough to switch networks, short enough to hold a match |
+| Vue SPA | Rendering, form state, optimistic UI, reconnecting the socket | Authorisation, capacity, visibility or any business rule |
+| Go API | Validation, authorisation, transactions, persistence, search, file access | Presentation |
+| WebSocket hub | Pushing already-persisted messages, notifications and presence | Being the record of truth |
+| PostgreSQL | Authoritative state, constraints, relations | Presentation or transport |
+| Caddy | TLS termination, HTTP→HTTPS redirect, routing | Application logic |
 
-### 3.1 Snapshot shape
+The server is authoritative for every write. A client may request an action; it
+never supplies the resulting permission decision, capacity count or record state.
 
-```jsonc
+---
+
+## 3. Domain packages
+
+```
+packages/server/internal/
+├── auth/            registration, login, sessions, OAuth account linking
+├── users/           profiles, avatars, platform roles
+├── friends/         requests, friendships, friend lists
+├── communities/     communities, membership, community roles
+├── content/         posts, articles, comments, reactions, feed queries
+├── events/          events, RSVP, capacity, status transitions
+├── marketplace/     listings, images, sale status
+├── chat/            conversations, messages, unread counts
+├── notifications/   notification creation and read state
+├── media/           upload, validation, storage, access checks
+├── search/          unified query and visibility filtering
+├── realtime/        WebSocket hub, per-user connections, presence
+├── storage/         database connection, migrations, repositories
+└── handler/         HTTP routing, middleware, error mapping
+```
+
+Rules:
+
+- A domain exposes a small service interface; handlers do not reach into another
+  domain's tables.
+- Cross-domain reads go through the owning domain's service.
+- Shared middleware handles authentication, request IDs, structured errors and
+  rate limits.
+- Every package that writes data has its own tests, including negative permission
+  cases.
+
+---
+
+## 4. Request flow
+
+```
+HTTP request
+  → Caddy (TLS)
+  → request ID + structured logging
+  → authentication middleware (session/JWT)
+  → route handler
+  → input validation (shape, size, type)
+  → authorisation check (platform / community / ownership)
+  → domain service
+  → transaction (PostgreSQL)
+  → response DTO
+```
+
+Validation happens at the boundary. Authorisation happens inside the domain
+service, not only in the handler, so a second entry point cannot bypass it.
+
+### Error shape
+
+```json
 {
-  "tick": 18342,
-  "serverTime": 1738291200123,
-  "status": "PLAYING",
-  "ball": { "x": 0.62, "y": 0.41, "vx": 0.011, "vy": -0.004 },
-  "paddles": [
-    { "id": "u1", "y": 0.5, "vy": 0, "score": 7 },
-    { "id": "u2", "y": 0.5, "vy": 0, "score": 9 }
-  ],
-  "powerups": [{ "type": "PADDLE_SPEED", "x": 0.3, "y": 0.7, "expiresAt": 1738291230000 }]
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "You are not a member of this community.",
+    "requestId": "req_01J..."
+  }
 }
 ```
 
-Coordinates are normalised to `0..1` so the engine is resolution-independent.
+Codes are stable and safe to show; internal details stay in server logs.
 
-### 3.2 Event names
+---
 
-**Client → server**
+## 5. Real-time
 
-| Event | Payload | Notes |
+One WebSocket connection per tab carries all real-time domains. Messages use a
+JSON envelope:
+
+```json
+{ "type": "chat:message", "payload": { "conversationId": "c1", "body": "Hi" } }
+```
+
+### Principles
+
+1. **Persist first, push second.** A message or notification is written before it
+   is broadcast.
+2. **The database is the replay log.** Reconnect fetches missed rows by cursor; it
+   does not rely on an in-memory replay buffer.
+3. **Presence is per user, not per socket.** Closing one of several tabs does not
+   mark the user offline.
+4. **Slow consumers are dropped.** A blocked socket must not block the hub.
+5. **Every inbound frame is authenticated and validated.** The connection identity
+   comes from the session, never from a client-supplied user ID.
+
+### Reconnect
+
+```
+socket drops
+   → client reconnects with the same session
+   → server registers the socket against the user
+   → client requests messages after its last cursor per conversation
+   → client fetches unread notifications
+   → presence is recomputed from active connections
+```
+
+A server restart loses no business data: messages, notifications and presence
+intent are already in PostgreSQL or are recomputed from live connections.
+
+---
+
+## 6. Data model
+
+```
+User ──< Session
+User ──< OAuthAccount
+User ──< FriendRequest ──> User
+User ──< Friendship ──> User
+
+User ──< CommunityMember >── Community ──< Content
+User ──< Content ──< Comment
+Content ──< Reaction >── User
+
+Content ──1 Event ──< EventParticipant >── User
+Content ──1 Listing
+Content ──< ContentAttachment >── MediaFile
+
+Conversation ──< ConversationMember >── User
+Conversation ──< Message
+
+User ──< Notification
+User ──< MediaFile
+```
+
+`Content` holds the common fields: author, optional community, type, visibility
+and publication time. `Post`, `Article`, `Event` and `Listing` hold their own
+business fields. This gives Feed, comments, reactions and attachments one shape
+without forcing event registration and marketplace sales into the same model.
+
+See [`decisions/0002-shared-content-model.md`](decisions/0002-shared-content-model.md).
+
+### Constraints and indexes
+
+| Constraint / index | Purpose |
+|---|---|
+| `User.email`, `User.username` unique | Identity |
+| `FriendRequest(requester, addressee)` unique | No duplicate pending requests |
+| `Friendship(userA, userB)` unique | One friendship per pair |
+| `Community.slug` unique | Stable community links |
+| `CommunityMember(community, user)` unique | One membership |
+| `EventParticipant(event, user)` unique | One RSVP per user |
+| `Content(publishedAt, visibility)` | Feed query |
+| `Listing(status, category, priceCents)` | Marketplace filters |
+| `Message(conversation, createdAt)` | History pagination |
+| `Notification(recipient, readAt)` | Unread badge |
+| every foreign key | Join performance and integrity |
+
+### Transactions
+
+- **Event RSVP:** lock the event row or use a capacity-safe conditional insert;
+  two simultaneous requests for the last seat produce exactly one success.
+- **Friend acceptance:** update the request and create the friendship in one
+  transaction.
+- **Content publish:** create the content row, attachment rows and notification
+  rows together.
+- **Account deletion:** resolve ownership and retention rules in one transaction
+  and document what is anonymised versus deleted.
+
+---
+
+## 7. Permissions
+
+Three independent layers:
+
+| Layer | Roles / relationships | Examples |
 |---|---|---|
-| `lobby:join` / `lobby:leave` | — | presence |
-| `game:join` | `{ roomCode, mode }` | mode: `ONE_V_ONE` \| `FFA` \| `AI` |
-| `game:ready` | — | both seats ready → countdown |
-| `game:input` | `{ seq, dir }` | 60 Hz, monotonic `seq` |
-| `game:pause` | — | host only |
-| `game:leave` | — | voluntary forfeit |
-| `game:rematch` | — | rematch vote |
-| `tournament:register` | `{ tournamentId }` | |
-| `friend:request` | `{ targetUserId }` | |
-| `chat:send` | `{ body }` | only if §11 chat is picked up |
+| Platform | `ADMIN`, `MODERATOR`, `USER` | Assign roles, remove content, list users |
+| Community | `OWNER`, `MEMBER` | Add/remove members, post community-only content |
+| Ownership | Author, seller, organiser | Edit or delete a post, listing or event |
 
-**Server → client**
+Rules:
 
-| Event | Payload | Notes |
-|---|---|---|
-| `game:state` | snapshot | 20 Hz, per room |
-| `game:event` | `{ type, ... }` | `score`, `bounce`, `powerup`, `countdown`, `point` |
-| `game:over` | `{ reason }` | `NORMAL` \| `FORFEIT` \| `ABANDONED` |
-| `game:error` | `{ code }` | `ROOM_FULL`, `NOT_AUTHORISED`, `INVALID_PAYLOAD` |
-| `lobby:update` | roster + presence | |
-| `tournament:update` | bracket progress | |
-| `presence:update` | `{ userId, online }` | friends list + profiles |
+- Platform roles are assigned by an Admin only.
+- A community owner's power stops at that community.
+- Ownership never overrides a platform ban or community restriction.
+- Search, message history, feed and file downloads apply the same visibility
+  rules as a direct read.
+- A denied action returns `403`, not a hidden button and not an empty `200`.
 
-Every inbound payload is parsed with a **zod** schema from `@pong/shared`. The
-same schema object types the frontend form, so validation cannot drift between
-the two sides.
+See [`decisions/0003-permissions.md`](decisions/0003-permissions.md).
 
 ---
 
-## 4. Reconnection
+## 8. Media
 
-```
-socket drops ──▶ seat reserved, room status = PAUSED, 30 s timer starts
-                     │
-      reconnect ◀─────┤ timeout
-      (same JWT +     │
-       room code)     ▼
-                state replay + lastProcessedSeq
-                client resumes rendering at once
-                     │
-                play continues, no point lost
-```
-
-If the timer expires, the seat is released and the remaining players score the
-point. A **server** restart is different: rooms live in memory, so in-progress
-matches are written as `ABANDONED` and excluded from statistics. This limitation
-is documented rather than hidden.
+- Validate size, extension and **magic bytes**; never trust the client MIME type.
+- Store under a generated name outside the web root.
+- Keep metadata in `MediaFile`; keep links in `ContentAttachment`.
+- Serve restricted files through an authorised route with `Content-Disposition`
+  and cache headers suitable for private content.
+- Delete or replace through the owning domain so no public orphan is left behind.
+- Upload limits come from `.env`; the frontend checks them for UX and the backend
+  enforces them for security.
 
 ---
 
-## 5. Data model
+## 9. Search
 
-```
-User ──┬─< RefreshToken
-       ├─< MatchParticipant >── Match
-       ├─< Friendship (requester) ── Friendship (addressee)
-       ├─< TournamentMatch (player A / player B / winner)
-       └─1 UserSettings
+Search is a read model over domain queries, not a second database:
 
-Tournament ──< TournamentMatch ──0..1 Match
-```
+1. Parse and validate the query, filters and pagination.
+2. Ask each requested domain for visible candidates (or use an indexed query).
+3. Apply the caller's visibility rules.
+4. Merge, sort and paginate consistently.
+5. Return only fields the caller is allowed to see.
 
-All foreign keys indexed, plus indexes on the columns used for filtering and
-sorting: `Match.mode`, `Match.startedAt`, `MatchParticipant.userId`,
-`User.rating`, `User.username`.
-
-### 5.1 Transactional result writes
-
-Finishing a match is one transaction:
-
-1. update `Match` → `status = FINISHED`, `winnerId`, `endedAt`, `durationMs`
-2. upsert one `MatchParticipant` row per player (score, result, placement)
-3. apply rating deltas and XP to each `User`
-
-Because it is a single transaction, two matches finishing at the same moment
-cannot interleave and corrupt statistics. Rating uses Elo; XP thresholds drive
-levels.
-
-### 5.2 Avatar storage
-
-Uploads are validated by **magic bytes**, not the client-supplied MIME type or the
-extension, size-capped, and written with a generated UUID filename to a directory
-outside the web root. They are served through an authenticated route that checks
-ownership, so an avatar ID cannot be used to probe for other users' files.
+Private messages and restricted community content never appear in results.
+Search is reviewed with negative tests per role.
 
 ---
 
-## 6. Deployment topology
+## 10. Deployment
 
 ```
                     ┌──────────────┐
@@ -209,35 +271,35 @@ ownership, so an avatar ID cannot be used to probe for other users' files.
               ┌────────────┴────────────┐
               ▼                         ▼
       ┌───────────────┐         ┌──────────────┐
-      │  web (nginx)  │         │  api (Node)  │  NestJS + Fastify
-      │  static SPA   │         │  + Socket.IO │
+      │  web (nginx)  │         │  api (Go)    │  Echo + WebSocket
+      │  static SPA   │         │              │
       └───────────────┘         └──────┬───────┘
                                        │
                                 ┌──────▼───────┐
-                                │  db (Postgres)│
-                                └───────────────┘
+                                │ db (Postgres)│
+                                └──────┬───────┘
+                                       │
+                                ┌──────▼───────┐
+                                │ uploads      │
+                                └──────────────┘
 ```
 
-`docker compose up --build` is the only command. Compose profiles separate
-development (plain HTTP, hot reload, exposed database port) from production
-(Caddy TLS, multi-stage images, no source mounts, no database port published).
-Secrets arrive exclusively through environment variables from `.env`, which is
-git-ignored; `.env.example` is the committed template.
+`docker compose up --build` is the only command. Development and production
+profiles separate plain HTTP/hot reload from Caddy TLS and multi-stage images.
+Secrets arrive through environment variables from `.env`, which is git-ignored;
+`.env.example` is the committed template.
 
 ---
 
-## 7. Decision records
+## 11. Testing strategy
 
-Short ADRs live in `decisions/`. The load-bearing decisions so far:
+| Level | What it protects |
+|---|---|
+| Go domain tests | Validation, permissions, capacity, transactions |
+| Go handler tests | Status codes, error shape, JSON contracts |
+| Vitest | Client stores, formatting and permission-aware rendering |
+| Playwright smoke | Login, feed, one social action, console clean |
+| Manual demo | The three-account script in `README.md` and `PLAN.md` |
 
-1. **Pure deterministic engine shared by every mode** — one code path for 1v1,
-   3+, and AI; testable; impossible to desync by construction.
-2. **Server-authoritative, input-only clients** — fairness, anti-cheat, and
-   free correctness for remote play.
-3. **Snapshot + interpolation over state streaming per entity** — Pong state is
-   tiny; a single message per tick is simpler and faster than entity diffing.
-4. **NestJS over bare Fastify** — module boundaries and guards map onto the
-   graded user-management and permissions modules; porting cost bounded to the
-   gateway and auth layers if the team stalls.
-5. **Rooms in memory, results in PostgreSQL** — a distributed room store is
-   unnecessary at this scale; matches are marked `ABANDONED` on restart.
+Every module needs a test written by someone other than its author, plus a
+negative test for at least one forbidden action.

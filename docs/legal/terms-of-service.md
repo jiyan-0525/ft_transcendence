@@ -1,115 +1,173 @@
 # Terms of Service
 
-**Last updated:** [W7 — date to be set]
-**Applies to:** Multiplayer Pong Arena ("the Service"), operated by the
+**Last updated:** [Week 6 — final date to be set]
+**Applies to:** Community & Content Platform ("the Service"), operated by the
 ft_transcendence student team.
 
 ---
 
 ## 1. Acceptance
 
-By creating an account or using the Service, you agree to these terms. If you do not
-agree, do not use the Service. These terms are governed by the laws of Germany; the
-courts of Heilbronn have jurisdiction, and consumers retain any mandatory
-protections of their country of residence.
+By creating an account or using the Service, you agree to these terms. If you do
+not agree, do not use the Service. These terms are governed by the laws of
+Germany; the courts of Heilbronn have jurisdiction, and consumers retain any
+mandatory protections of their country of residence.
+
+---
 
 ## 2. Eligibility
 
 You must be at least 16 years old and able to enter a binding contract. If you use
 the Service on behalf of an organisation, you confirm you are authorised to do so.
 
+---
+
 ## 3. Accounts
 
-- One account per person. Registering multiple accounts to influence rankings or
-  tournaments is a breach of §5.
-- You are responsible for keeping your credentials confidential and for all activity
-  under your account.
-- You must provide accurate registration information and keep it up to date.
-- You can delete your account at any time from the settings page. Deletion is
-  permanent and cannot be undone.
-- We may suspend or terminate accounts that breach these terms, as described in §7.
+- You must provide accurate registration information and keep it current.
+- You are responsible for activity under your account and for keeping your
+  credentials secure.
+- One person should not maintain multiple accounts to evade a restriction.
+- You may sign in with email/password or the configured OAuth provider.
+- You may delete your account at any time. Some records may be retained as
+  described in the Privacy Policy.
+
+---
 
 ## 4. The Service
 
-Multiplayer Pong Arena provides: accounts and profiles, a real-time multiplayer
-Pong game, local area 3+ free-for-all matches, single-elimination tournaments, an AI
-opponent, a friends system, statistics and leaderboards.
+The Service provides:
 
-We may add, change or remove features. We aim for continuous availability but do not
-guarantee uninterrupted service — matches may be interrupted by maintenance,
-deployment or network failure, and abandoned matches are not counted in statistics.
+- accounts, profiles, avatars, friends and presence;
+- posts, articles, comments and reactions;
+- user-created communities with membership and community roles;
+- events with RSVP and capacity limits;
+- second-hand marketplace listings and seller contact;
+- one-to-one real-time messaging and notifications;
+- permission-aware search and role-based administration.
+
+We provide the Service for personal, non-commercial community use. We do not
+guarantee uninterrupted availability; maintenance, deployment and network failure
+may interrupt it.
+
+---
 
 ## 5. Acceptable use
 
 You must not:
 
-- Cheat, automate, script, or exploit bugs to gain an advantage
-- Modify, reverse-engineer, or attempt to access the source code, or probe the
-  service for vulnerabilities without written authorisation
-- Use bots, macros, packet interception, or client modifications
-- Harass, abuse, impersonate, or disrupt other users
-- Upload malicious code, or content that is illegal, infringing, or hateful
-- Scrape, overload, or attempt to disrupt the infrastructure (rate limits apply)
-- Share your account or let others use it
-- Circumvent bans, match restrictions, or other access controls
+- publish illegal content, harassment, hate speech, threats or sexual content
+  involving minors;
+- impersonate another person or misrepresent an affiliation;
+- upload malware or attempt to bypass file validation;
+- scrape, overload or probe the Service without permission;
+- attempt to access another user's account, messages, private content or files;
+- circumvent community or platform permissions;
+- use the marketplace for fraud, prohibited goods or automated spam;
+- violate the rights of others, including copyright and privacy.
 
-Because matches are server-authoritative, client-side modification confers no
-advantage; attempting it is grounds for termination.
+We may remove content and restrict accounts that violate these rules.
 
-## 6. Ratings, tournaments and fair play
+---
 
-- Statistics, ratings and tournament standings reflect recorded match results.
-- Tournament brackets are single-elimination; matches not completed within the
-  allowed time may be forfeited.
-- We may void results that we reasonably believe were obtained through cheating or
-  abuse, and adjust statistics accordingly.
-- Cheating may result in removal of the affected results, a temporary suspension,
-  or permanent ban at our discretion.
+## 6. Your content
 
-## 7. Suspension and termination
+- You retain ownership of the content you publish.
+- You grant the Service a non-exclusive, worldwide licence to store, display and
+  distribute your content to the audience you selected, solely to operate the
+  Service.
+- You confirm you have the rights needed to publish the content and to grant this
+  licence.
+- Deleting content ends the licence for future distribution, but copies already
+  shared with other users may remain.
+- You are responsible for the content you upload and for the permissions you
+  choose.
 
-You may stop using the Service at any time and delete your account.
+---
 
-We may suspend or terminate an account that breaches §5, is compromised and used
-harmfully, or impersonates another user. Where appropriate we will warn you first
-and give a reasonable opportunity to respond. You may appeal by contacting us.
+## 7. Communities and moderation
 
-## 8. Content and ownership
+- Community owners manage membership and community content. Their powers are
+  limited to their community.
+- Platform roles (Admin, Moderator, User) are assigned by the Service.
+- Moderators may hide or remove content that violates these terms.
+- We may suspend or terminate an account for serious or repeated violations,
+  security risk or legal requirement.
+- You can appeal a moderation decision through the contact address below.
 
-- **Your content.** You retain ownership of anything you upload, such as avatar
-  images. You grant us a non-exclusive licence to host and display it for the
-  purpose of operating the Service.
-- **Our content and software.** The game engine, source code, design, artwork and
-  branding are owned by the team and licensed under the repository's licence. We do
-  not claim ownership of your gameplay data.
-- **Feedback.** If you suggest a feature, you allow us to use it without obligation.
+---
 
-## 9. Availability and warranty
+## 8. Marketplace
 
-The Service is provided "as is", without warranty of availability, fitness for a
-particular purpose, or non-infringement, to the extent permitted by law. Nothing in
-these terms excludes liability that cannot legally be excluded, including for
-intentional misconduct or injury to life, body or health.
+The marketplace is a **classifieds board**, not a shop.
 
-## 10. Liability
+- Listings are created by users, not by the Service.
+- We do not process payments, shipping, refunds, orders or transaction reviews.
+- We do not guarantee the accuracy, quality, legality or availability of an item.
+- A transaction is between the buyer and the seller. Check the item and agree on
+  the terms before exchanging money.
+- Contacting a seller opens a private conversation; do not send sensitive
+  financial information.
+- Prohibited or fraudulent listings may be removed.
 
-We are liable for damages arising from injury to life, body or health, and for
-intentional or grossly negligent misconduct, without limitation. For any other
-damage, our liability is limited to the greater of the amount you paid us in the
-last 12 months, or EUR 50. The same limitation applies to our students, team
-members and legal representatives.
+---
 
-## 11. Data protection
+## 9. Events
 
-Our processing of your personal data is described in the
-[Privacy Policy](/docs/legal/privacy-policy.md), which forms part of these terms.
+- Events are created and run by users.
+- The organiser is responsible for the accuracy of the time, place, capacity and
+  safety of the event.
+- RSVP is a statement of intent, not a ticket or a contract.
+- Organisers may change or cancel an event; attendees are notified through the
+  Service.
+- We are not responsible for an event's conduct, safety or outcome.
 
-## 12. Changes
+---
 
-We may update these terms. Changes are posted here with an updated date at least 14
-days before taking effect, and material changes are announced in the application.
-Continuing to use the Service after that constitutes acceptance.
+## 10. Permissions and access
 
-## 13. Contact
+Access is enforced by the backend. Hiding a button is not a permission. Attempting
+to access content you are not authorised to see is a breach of these terms, even if
+a client bug makes it possible.
 
-**privacy@pong-arena.example**
+---
+
+## 11. Availability and warranty
+
+The Service is provided "as is" for an educational project. To the extent
+permitted by law, we disclaim implied warranties of merchantability, fitness for a
+particular purpose and non-infringement. We do not warrant that the Service will
+be error-free or that data will never be lost; keep your own copies of important
+content.
+
+---
+
+## 12. Liability
+
+To the extent permitted by law, we are not liable for indirect, incidental,
+special or consequential damages, loss of data, loss of profit, or harm arising
+from user content, marketplace transactions or events. Nothing in these terms
+limits liability that cannot be limited by law.
+
+---
+
+## 13. Data protection
+
+We process personal data as described in the
+[Privacy Policy](privacy-policy.md). You can exercise your rights through the
+contact address below.
+
+---
+
+## 14. Changes to the Service or these terms
+
+We may change the Service and these terms as the project develops. Material
+changes are announced in the application before they take effect. Continuing to
+use the Service after a change means you accept the updated terms.
+
+---
+
+## 15. Contact
+
+Questions, appeals or legal notices:
+**privacy@transcendence.example**

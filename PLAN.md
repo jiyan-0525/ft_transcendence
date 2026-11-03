@@ -1,32 +1,45 @@
 # ft_transcendence — Project Plan
 
-**Project:** Multiplayer Pong Arena
+**Project:** Community & Content Platform
 **Track:** 42 Heilbronn — Common Core, final project
-**Team size:** 4
-**Status:** pre-kickoff (W0)
-**Target:** 17 committed module points (14 required) + 3 stretch points
+**Team size:** 5
+**Status:** Week 1 — shared foundation
+**Target:** 18 module points (6 Major + 6 Minor); 14 required
 
 ---
 
 ## 1. Vision
 
-A real-time multiplayer Pong platform where users register, build a profile, add
-friends, see who is online, and play live matches — 1v1 across separate machines,
-3+ free-for-all, or against an AI opponent — then compete in single-elimination
-tournaments with persistent statistics and a leaderboard.
+A social platform where people share photos and long-form writing, build friend
+networks and interest communities, organise real-world events, and trade
+second-hand gear in a lightweight marketplace. One account, one unified feed,
+real-time chat and notifications, permission-aware search, and role-based
+administration.
+
+The product is deliberately a **social core plus Communities, Blog, Events and a
+lightweight Marketplace**. Images, chat, search and notifications are shared
+capabilities that cut across every domain rather than separate products.
 
 ### Success criteria
 
-1. `docker compose up` gives a working, HTTPS-served app with a seeded database.
-2. Two people on two different laptops can play a smooth, fair match.
-3. Every claimed module is demonstrable end-to-end in under 2 minutes each.
-4. The browser console stays clean during normal use.
-5. Every team member can explain the architecture and their own contributions.
+1. `docker compose up --build` gives a working, HTTPS-served app with a seeded
+   database and no manual steps.
+2. The Julie journey works end to end: register → complete profile → join a
+   community → publish a photo → read a blog → RSVP to an event → receive a
+   reschedule notification → contact a marketplace seller.
+3. All 12 scoring modules are demonstrable end to end.
+4. Permissions are enforced by the backend, including in search and file access.
+5. The browser console stays clean during normal use.
+6. All five members can explain the architecture and their own contribution.
 
 ### Non-goals (explicitly out of scope)
 
-Payments, mobile-native apps, video/voice chat, SSR/SEO optimisation, public
-developer API, blockchain, microservice decomposition. See §7 for why.
+- Marketplace payments, shipping, refunds, orders and transaction reviews.
+- Event waitlists, recurring events, ticketing and external calendar sync.
+- A standalone photo gallery (the profile **Photos** tab covers v1).
+- Video/voice calls, native mobile apps, SSR/SEO optimisation, a public developer
+  API, blockchain and microservice decomposition.
+- Rich-text/HTML authoring in the blog; Markdown is sufficient for v1.
 
 ---
 
@@ -34,343 +47,424 @@ developer API, blockchain, microservice decomposition. See §7 for why.
 
 | Layer | Choice | Rationale |
 |---|---|---|
-| Language | TypeScript 5.x, strict | Shared types across client/server; no runtime type drift |
-| Frontend | React 18 + Vite + Tailwind CSS | Required to claim the "framework" major module; fast HMR for game tuning |
-| State (client) | Zustand + one `useRef` game-loop hook | Avoids re-render storms at 60 fps |
-| Backend | NestJS on the Fastify adapter | Structured DI, guards (auth/roles), first-class Socket.IO gateways |
-| Realtime | Socket.IO (WS + polling fallback) | Rooms, reconnection, ack/callback semantics for free |
-| Database | PostgreSQL 16 | Required for real relations + transactions on match results |
-| ORM | Prisma 5 | Migrations + typed queries; claims the ORM minor module |
-| Auth | argon2id + JWT (short-lived access + rotating refresh) | Requirement: hashed + salted passwords |
-| TLS | Caddy as reverse proxy, automatic HTTPS | "HTTPS everywhere" requirement, zero-config certs |
+| Frontend | Vue 3 + TypeScript + Vite | The scaffold already exists; typed SPA with fast HMR |
+| Routing / state | Vue Router + Pinia | Explicit server-state and session stores; no duplicated domain rules |
+| Styling | Tailwind CSS + custom component library | Responsive UI and the 10+ reusable components required by the design-system module |
+| Backend | Go + Echo | Small, explicit HTTP layer; strong standard library; easy single-binary deployment |
+| Database | PostgreSQL 16 | Real relations, constraints and transactions for capacity, permissions and notifications |
+| Data access | GORM | Migrations and typed relations; claims the ORM minor module |
+| Realtime | Native JSON WebSocket | One protocol for chat, notifications and presence; no polling fallback to maintain |
+| Auth | Email/password + one OAuth provider, argon2id or bcrypt, server-issued sessions/JWT | Requirement: secure password storage and external login |
+| File storage | Docker persistent volume + file metadata in PostgreSQL | Requirement: durable uploads with validation and access control |
+| Reverse proxy | Caddy, automatic HTTPS | "HTTPS everywhere" with minimal configuration |
 | Packaging | Docker Compose, multi-stage builds | Requirement: single-command deployment |
-| i18n | react-i18next, 3 locales | Cheap 1-point stretch module |
-| Tests | Vitest (unit) + Supertest (e2e) + Playwright (smoke, optional) | Headless engine test is mandatory (§5.2) |
+| Tests | Go `testing`, Vitest, Playwright smoke tests | Domain tests, unit tests and an end-to-end console check |
 
-### Why NestJS over bare Fastify
+### Why Go + Echo
 
-Four people, three of whom will touch the backend. NestJS gives module boundaries,
-DI, and `@UseGuards` role checks that map directly onto the permissions and
-user-management modules, plus a documented `WsException` filter for gateway errors.
-The cost is decorators and a slower start; the benefit is that a junior can find
-where to add an endpoint instead of guessing.
+The backend is one deployable **modular monolith**. Echo keeps routing and
+middleware explicit, goroutines make the WebSocket hub straightforward, and the
+result compiles to a small image that starts quickly inside Compose. Domain
+packages give the separation a larger framework would provide without the
+reflection and dependency-injection overhead.
 
-**Fallback:** if the team hits W2 and is struggling, the gateway and auth layers are
-the only NestJS-specific code and can be ported to Fastify + TypeBox in ~2 days.
+### Why Vue 3
+
+The current repository scaffold uses Vue 3, TypeScript, Vite and Pinia. The
+product design is unchanged by that choice: the framework module requires a
+frontend framework and a backend framework, not a specific brand.
+
+### Why PostgreSQL
+
+Event capacity, community membership, content visibility, friend relationships
+and notification fan-out all need relational integrity. PostgreSQL also gives us
+the transactions that make "one seat left, two simultaneous RSVPs" correct.
 
 ---
 
 ## 3. Repository layout
 
 ```
-transcendence/
-├── docker-compose.yml          # postgres, server, web, caddy
-├── .env.example                # committed template; real .env git-ignored
-├── Makefile                    # make dev / make seed / make logs
-├── README.md                   # graded entry point (roles, modules, demo)
-├── PLAN.md                     # this file
+ft_transcendence/
+├── docker-compose.yml           # postgres, server, web, caddy (Week 1)
+├── .env.example                 # committed template; real .env git-ignored
+├── Makefile                     # up / down / logs / test / lint
+├── README.md                    # graded entry point: roles, modules, demo
+├── PLAN.md                      # this file
+├── Project design.pdf           # product design: pages, scope, data model
+├── Social Network.pdf           # 18-point module config, scoring boundaries, demo
 ├── docs/
-│   ├── architecture.md         # diagrams, data flow, socket protocol
-│   ├── module-claims.md        # per-module evidence + demo script
-│   └── decisions/              # ADRs: engine choice, sync model, stack
-├── packages/
-│   ├── shared/                 # zod schemas, tick types, game constants, event map
-│   │   └── src/
-│   ├── server/                 # NestJS + Prisma + Socket.IO
-│   │   ├── prisma/schema.prisma
-│   │   └── src/
-│   │       ├── auth/           # signup, login, refresh, guards
-│   │       ├── users/          # profile, avatar upload
-│   │       ├── friends/        # requests, accept, presence
-│   │       ├── game/           # PURE engine (no I/O) + game service
-│   │       ├── gateway/        # Socket.IO namespaces: /lobby /game /chat
-│   │       ├── tournament/     # registration, seeding, bracket
-│   │       ├── ai/             # AI opponent policies
-│   │       ├── stats/          # ratings, XP, achievements
-│   │       └── health/         # /health, /api/status
-│   └── web/                    # Vite React app
-│       └── src/
-│           ├── pages/          # login, lobby, game, profile, tournament, legal
-│           ├── components/     # design system (10+ reusable)
-│           ├── game/           # canvas renderer, interpolation, input capture
-│           ├── i18n/           # en, de, fr
-│           └── lib/            # api client, socket client, stores
+│   ├── architecture.md          # diagrams, domain boundaries, WebSocket protocol
+│   ├── module-claims.md         # per-module evidence + demo script
+│   ├── decisions/               # ADRs: shared Content layer, auth, sync model
+│   └── legal/                   # Privacy Policy, Terms of Service
+└── packages/
+    ├── server/                  # Go + Echo
+    │   ├── cmd/server/          # entry point
+    │   └── internal/
+    │       ├── auth/
+    │       ├── users/
+    │       ├── friends/
+    │       ├── communities/
+    │       ├── content/         # posts, articles, comments, reactions
+    │       ├── events/
+    │       ├── marketplace/
+    │       ├── chat/
+    │       ├── notifications/
+    │       ├── media/
+    │       ├── search/
+    │       ├── realtime/        # WebSocket hub, presence, reconnect
+    │       ├── storage/         # PostgreSQL, migrations, file metadata
+    │       └── handler/         # HTTP handlers and middleware
+    └── web/                     # Vue 3 + TypeScript + Vite
+        └── src/
+            ├── views/           # Feed, Profile, Communities, Blog, Events, ...
+            ├── components/      # design system (10+ reusable)
+            ├── stores/          # Pinia stores
+            ├── lib/             # API client, WebSocket client
+            └── router/
 ```
+
+The configuration, documentation and UI shell now follow this layout. The domain
+packages, Docker Compose stack and Caddy configuration are Week 1 deliverables.
 
 ---
 
 ## 4. Architecture
 
+The backend is a **modular monolith**: one deployable service, one database, and
+strict package boundaries per business domain.
+
 ```
-┌────────────┐  HTTPS/REST   ┌──────────────┐   WSS    ┌──────────────┐
-│  Browser   │──────────────▶│ NestJS API   │◀────────▶│ Socket.IO    │
-│  React SPA │               │ (Fastify)    │  rooms    │ gateways     │
-└────────────┘               └──────┬───────┘           └──────┬───────┘
-                                      │                          │
-                                      │                   ┌──────▼───────┐
-                                      │                   │ GameService  │
-                                      │                   │ 60 Hz loop   │
-                                      │                   │ rooms/players│
-                                      │                   └──────┬───────┘
-                                      │                          │
-                                      │                   ┌──────▼───────┐
-                                      │                   │ PURE ENGINE  │
-                                      │                   │ step()       │
-                                      │                   └──────────────┘
-                                      │
-                               ┌──────▼───────┐
-                               │  PostgreSQL  │  Prisma
-                               └──────────────┘
+Browser (Vue SPA)
+   │  HTTPS / REST                 WSS
+   ▼                                 ▼
+Caddy ──▶ Go + Echo API ──▶ PostgreSQL   WebSocket hub
+              │                              │
+              ├── auth / users / friends     ├── chat
+              ├── communities / content      ├── notifications
+              ├── events / marketplace       └── presence
+              ├── notifications / media
+              └── search
 ```
 
-### 4.1 Trust model
+### 4.1 Why a monolith
 
-The server is fully authoritative. Clients never send positions, scores, or
-outcomes — only **input intents**. This is what makes anti-cheat, fairness in 3+
-matches, and tournament integrity defensible during evaluation.
+Event RSVP capacity, permissions, notifications and community membership need to
+agree. Keeping one application and one database lets those operations share a
+transaction. Microservices would add deployment, cross-service authentication and
+debugging work without a product benefit at this scale.
+
+### 4.2 Communication
+
+| Path | Used for |
+|---|---|
+| **REST** | Registration, profile and admin CRUD, content publication, search, RSVP, message history |
+| **WebSocket** | New messages, notifications, presence and reconnect events |
+| **PostgreSQL** | The authoritative business state |
+
+WebSocket delivery is **not** the record of truth. If a message or notification
+is pushed while the user is offline, the persisted row is what they see on
+reconnect. A single WebSocket connection carries all real-time domains; the
+message envelope identifies the domain.
+
+### 4.3 Content modelling
+
+A shared `Content` row stores what every item has in common: author, optional
+community, content type, visibility and publication time. `Post`, `Article`,
+`Event` and `Listing` store their own business fields. Feed, comments, reactions
+and attachments then work uniformly without forcing event registration and
+marketplace sales into one business model.
+
+This decision is confirmed in Week 1 against real query and permission
+complexity. If the shared layer makes either harder, the domain tables stay
+separate.
+
+### 4.4 Permissions
+
+Three independent layers:
+
+| Layer | Roles / relationships | Scope |
+|---|---|---|
+| Platform | `ADMIN`, `MODERATOR`, `USER` | Platform users, roles and content |
+| Community | `OWNER`, `MEMBER` | One community, its members and its content |
+| Content ownership | Author, seller, organiser | The resources the user owns |
+
+Every restricted operation goes through a server-side authorisation check.
+Hiding a button is never treated as access control. Search results, message
+history and file downloads reuse the same checks as normal reads.
+
+### 4.5 Consistency and concurrency
+
+- Event capacity is enforced with a transaction and a database constraint or row
+  lock. Two simultaneous RSVPs for the last seat produce exactly one success.
+- Friend requests are unique per pair and idempotent; accepting a request creates
+  the friendship in the same transaction.
+- Content publication, notification creation and feed visibility are written
+  together so a notification never points at a missing row.
+- Unique constraints protect usernames, emails, OAuth subject IDs, community
+  memberships, event participants and conversation membership.
+
+### 4.6 Real-time and reconnect
+
+- One WebSocket connection per tab, registered against the authenticated user.
+- Presence is per user, not per socket: closing one of several tabs does not mark
+  the user offline.
+- Messages and notifications are persisted first, then pushed.
+- On reconnect the client requests the latest sequence/cursor per conversation
+  and fetches missed notifications; it does not rely on a replay buffer.
+- A slow consumer is dropped rather than allowed to block the hub.
+
+### 4.7 Media
+
+- Uploads are validated on both sides: size, extension and magic bytes; never
+  trust the client MIME type.
+- Files are stored outside the web root under random names.
+- Access to restricted attachments is served through an authorised route.
+- Replacing or deleting content deletes or orphans its metadata deliberately,
+  never silently leaves a public file behind.
 
 ---
 
-## 5. The game engine (the load-bearing decision)
+## 5. Data model
 
-### 5.1 Contract
-
-One module, no imports from NestJS, no I/O, no `setInterval`, no `Math.random()`.
-
-```ts
-export const step = (
-  state: GameState,
-  inputs: ReadonlyMap<PlayerId, InputFrame>,
-  dtMs: number,
-): GameState => { /* pure; returns a new state */ }
-```
-
-`GameState` is a plain serialisable object. Every rule — paddle clamping, wall and
-paddle bounce, scoring, power-up pickup/expiry, win condition, serve direction —
-lives here. Anything that changes game outcomes must be reachable from this
-function.
-
-### 5.2 Why it pays for itself
-
-| Requirement | How the shared engine satisfies it |
+| Domain | Core entities |
 |---|---|
-| Remote players | Clients are pure renderers of authoritative snapshots — identical fairness regardless of machine |
-| 3+ multiplayer | FFA is the *same* `step()` with N paddles; no second code path |
-| AI opponent | An `InputFrame` producer. The AI never touches state, so it is subject to exactly the same physics as a human |
-| Reconnection | State is one object. Send it, restore it, continue |
-| Testability | 10 000 headless ticks in a unit test in under a second — this is our desync regression test |
-| Anti-cheat | There is no client-side outcome to fake |
+| Users and relationships | `User`, `Session`, `OAuthAccount`, `FriendRequest`, `Friendship` |
+| Communities | `Community`, `CommunityMember` |
+| Content | `Content`, `Post`, `Article`, `Comment`, `Reaction` |
+| Events | `Event`, `EventParticipant` |
+| Marketplace | `Listing` |
+| Chat | `Conversation`, `ConversationMember`, `Message` |
+| Files | `MediaFile`, `ContentAttachment` |
+| Notifications | `Notification` |
 
-### 5.3 Network model
-
-- Server tick: fixed **60 Hz** (`dt = 1000/60` ms, accumulator-based).
-- Broadcast: **20 Hz** snapshots with `{ tick, serverTime, ball, paddles, powerups }`.
-- Client input: `{ seq, dir }` at 60 Hz, sent with a **100 ms delay buffer**.
-- Client render: interpolation between the two snapshots bracketing
-  `serverTime - 100 ms`; extrapolation capped at 250 ms during packet loss.
-- Clock sync: NTP-style offset estimation from the `serverTime` in every snapshot,
-  smoothed with a rolling median.
-
-### 5.4 Socket protocol
-
-Client → server: `lobby:join`, `lobby:leave`, `game:join {roomCode, mode}`,
-`game:ready`, `game:input {seq, dir}`, `game:pause`, `game:leave`,
-`game:rematch`, `tournament:register`, `friend:request`, `chat:send`.
-
-Server → client: `game:state` (snapshot), `game:event` (score, bounce, powerup,
-point, countdown, win), `game:over {reason}`, `game:error {code}`,
-`lobby:update` (roster, online status), `presence:update`, `tournament:update`
-(bracket progress).
-
-All inbound payloads are validated with zod schemas from `@pong/shared` — the same
-schemas the frontend uses to type its forms. One definition, both sides.
-
-### 5.5 Disconnection and reconnection
-
-1. Socket drops → keep the player seat reserved for **30 s**, room paused.
-2. Reconnect with the same JWT and room code → server replays current
-   `GameState` + `lastProcessedSeq`; the client resumes rendering immediately.
-3. Timeout → seat released, opponent scores the point, match may end.
-4. Server restart → rooms are in memory; matches in progress are marked
-   `ABANDONED` in the database and **not** counted in statistics.
-
-### 5.6 Data model (Prisma)
+Key fields and rules:
 
 ```
-User            id, email(unique), passwordHash?, username(unique), avatarUrl?,
-                role(USER|MODERATOR|ADMIN), locale, xp, level, rating,
-                wins, losses, draws, oauthId?(unique), createdAt
-RefreshToken    id, userId→User, tokenHash, expiresAt, revokedAt?
-Friendship      id, requesterId→User, addresseeId→User,
-                status(PENDING|ACCEPTED|BLOCKED), createdAt
-                @@unique([requesterId, addresseeId])
-Match           id, mode(ONE_V_ONE|FFA|AI|TOURNAMENT), status(LIVE|FINISHED|
-                ABANDONED|FORFEIT), startedAt, endedAt?, winnerId?, durationMs?
-MatchParticipant matchId→Match, userId?→User(nullable: AI), displayName,
-                isAi, score, result(WIN|LOSS|DRAW|FORFEIT), placement?, inputSeq?
-Tournament      id, name, status(REGISTRATION|IN_PROGRESS|FINISHED),
-                maxPlayers, championId?→User, createdAt
-TournamentMatch id, tournamentId→Tournament, round, slotIndex,
-                playerAId?→User, playerBId?→User, winnerId?→User,
-                matchId?→Match, status(PENDING|READY|PLAYED)
-UserSettings    userId→User(pk), arenaTheme, ballSpeed, paddleSpeed,
-                paddleColor, powerupsEnabled
+User              id, email(unique), passwordHash?, username(unique), bio,
+                  avatarMediaId?, platformRole(USER|MODERATOR|ADMIN),
+                  oauthProvider?, oauthSubject?, createdAt
+Session           id, userId→User, tokenHash, expiresAt, revokedAt?
+FriendRequest     id, requesterId→User, addresseeId→User,
+                  status(PENDING|ACCEPTED|REJECTED), createdAt
+Friendship        id, userAId→User, userBId→User, createdAt
+Community         id, ownerId→User, name, slug(unique), description, visibility
+CommunityMember   communityId→Community, userId→User, role(OWNER|MEMBER),
+                  joinedAt
+Content           id, authorId→User, communityId?→Community,
+                  type(POST|ARTICLE|EVENT|LISTING),
+                  visibility(PUBLIC|FRIENDS|COMMUNITY|PRIVATE),
+                  publishedAt?, deletedAt?
+Post              contentId→Content, body
+Article           contentId→Content, title, summary, bodyMarkdown, coverMediaId?
+Comment           id, contentId→Content, authorId→User, body, createdAt
+Reaction          id, contentId→Content, userId→User, kind, unique(content,user,kind)
+Event             contentId→Content, title, description, location, startsAt,
+                  endsAt, capacity?, status(UPCOMING|CANCELLED|COMPLETED)
+EventParticipant  eventId→Event, userId→User, status(GOING|CANCELLED),
+                  unique(event,user)
+Listing           contentId→Content, title, description, priceCents, currency,
+                  category, condition, status(AVAILABLE|RESERVED|SOLD)
+Conversation      id, createdAt
+ConversationMember conversationId→Conversation, userId→User, lastReadAt?
+Message           id, conversationId→Conversation, senderId→User, body, createdAt
+MediaFile         id, ownerId→User, storageKey, mimeType, sizeBytes, createdAt
+ContentAttachment contentId→Content, mediaId→MediaFile, role(AVATAR|COVER|GALLERY|ATTACHMENT)
+Notification      id, recipientId→User, type, payloadJson, readAt?, createdAt
 ```
 
-Relations are explicit and indexed on every foreign key and every column used in a
-filter/sort (`Match.mode`, `Match.startedAt`, `MatchParticipant.userId`). Result
-writes happen in a single transaction: update `Match`, upsert `MatchParticipant`
-rows, apply rating/XP deltas — so concurrent finishes cannot corrupt stats.
+Indexes cover every foreign key and every column used in a filter or sort:
+`Content.publishedAt`, `Content.visibility`, `Listing.status`, `Listing.category`,
+`Listing.priceCents`, `Event.startsAt`, `Notification.recipientId + readAt`,
+`Message.conversationId + createdAt`.
 
 ---
 
 ## 6. Module plan
 
-### 6.1 Committed — 17 points
+### 6.1 Committed — 18 points (6 Major + 6 Minor)
 
-| # | Category | Module | Pts | Owner | Depends on |
+| # | Area | Module | Pts | Lead | Depends on |
 |---|---|---|---|---|---|
-| 1 | Web | Major — framework for frontend **and** backend | 2 | B | W1 |
-| 2 | Web | Major — real-time features via WebSockets | 2 | B | 1, W3 |
-| 3 | Web | Minor — ORM | 1 | C | 1, W1 |
-| 4 | Gaming | Major — complete web-based game | 2 | B | 1, W3 |
-| 5 | Gaming | Major — remote players (2 machines, reconnect) | 2 | B+D | 4, W4 |
-| 6 | Gaming | Major — multiplayer 3+ | 2 | B+D | 4, W4 |
-| 7 | Gaming | Minor — tournament system | 1 | D | 5, W5 |
-| 8 | Gaming | Minor — game customization (power-ups, themes) | 1 | D | 4, W6 |
-| 9 | User Mgmt | Major — profile, avatar, friends, online status | 2 | A | 1, W2 |
-| 10 | AI | Major — AI opponent | 2 | D | 4, W6 |
+| 1 | Web | Major — frontend and backend frameworks | 2 | A + B | W1 |
+| 2 | Web | Major — real-time features (chat, notifications, presence, reconnect) | 2 | C | 1, W2 |
+| 3 | User | Major — user interaction (profiles, friends, basic DMs) | 2 | A + C | 1, W2 |
+| 4 | User | Major — standard user management (profile, avatar, friends, online status) | 2 | A + B | 1, W2 |
+| 5 | User | Major — organization system (communities) | 2 | D | 1, W4 |
+| 6 | User | Major — advanced permissions (platform, community, ownership) | 2 | B | 1, W4 |
+| 7 | Web | Minor — ORM | 1 | B | 1, W1 |
+| 8 | User | Minor — notification system | 1 | C | 2, W2 |
+| 9 | Web | Minor — advanced search (keywords, filters, sort, pagination, visibility) | 1 | E | 4, W5 |
+| 10 | Web | Minor — file upload and management | 1 | B | 1, W3 |
+| 11 | Web | Minor — custom design system (10+ reusable components) | 1 | A | 1, W1–W3 |
+| 12 | User | Minor — OAuth 2.0 (one external provider) | 1 | B | 1, W4 |
 
-### 6.2 Stretch — 3 points
+### 6.2 Scoring boundaries
 
-| # | Category | Module | Pts | Owner | Target |
-|---|---|---|---|---|---|
-| S1 | User Mgmt | Minor — game statistics, match history, leaderboard | 1 | D | W7 |
-| S2 | A11y/i18n | Minor — 3 languages + switcher | 1 | C | W7 |
-| S3 | DevOps | Minor — health/status page + backups | 1 | C | W7 |
+The 18-point configuration lists two overlapping majors. Both must be
+demonstrated in full:
+
+- **User interaction (#3)** covers public profiles, the friend graph and basic
+  one-to-one messaging.
+- **Standard user management (#4)** covers registration/login, profile editing,
+  avatar with a default, friends list and online status.
+- **Organization system (#5)** covers community lifecycle, membership and
+  community roles.
+- **Advanced permissions (#6)** requires platform-wide user CRUD and role
+  management. Editing your own post is ownership, not this module.
+- Blog, Events and Marketplace are product features and do not add points in this
+  configuration.
+- Advanced chat (group chat, calls), AI and game modules are **not** part of the
+  18 points.
 
 ### 6.3 Cut order (if behind schedule)
 
-`S1 → S2 → S3 → #8 → #7`
+`#12 OAuth → #9 advanced search → #11 design-system extras`
 
-**Never cut #4, #5, #6.** A multiplayer game is the foundation of everything else
-(AI, tournaments, statistics all require it), and shipping a broken game to protect
-two minor points is a bad trade.
+The 18 claimed points leave four points above the 14-point requirement. Cut only
+minors, and only after the core social loop works.
+
+**Never cut:** #1 frameworks, #2 real-time, #3 user interaction, #4 user
+management, #5 communities, #6 permissions, #10 file upload. These carry the
+product, the Julie journey and the permission story; a partial major scores zero.
 
 ### 6.4 Definition of Done — per module, non-negotiable
 
-An incomplete module scores **zero**. So every module must satisfy all six:
+An incomplete module scores **zero**. Every module must satisfy all six:
 
-1. [ ] Runs from a clean `docker compose up` — no manual patches, no "works on my machine"
+1. [ ] Runs from a clean `docker compose up --build` with no manual patches
 2. [ ] Zero errors **and zero warnings** in the browser console
-3. [ ] Validated on both frontend and backend (zod at the boundary, no un-validated input)
+3. [ ] Validated on the frontend **and** the backend
 4. [ ] Tested by a **second** team member, not just the author
-5. [ ] README section + a demo script of ≤5 steps in `docs/module-claims.md`
+5. [ ] README section + demo script of ≤5 steps in `docs/module-claims.md`
 6. [ ] Merged to `main` via PR with at least one approving review
 
 ---
 
 ## 7. Roles and responsibilities
 
-| Member | Role(s) | Workstream | Modules owned |
+| Member | Development responsibility | Project role | Weeks |
 |---|---|---|---|
-| **A** | Product Owner + Developer | auth, profile, friends, presence | 9 |
-| **B** | Technical Lead / Architect + Developer | engine, gateway, infra, CI | 1, 2, 4, 5, 6 |
-| **C** | Project Manager / Scrum Master + Developer | React app, renderer, i18n, a11y, legal pages | 3, S2, S3 |
-| **D** | Developer + QA owner | tournaments, AI, customization, stats | 7, 8, 10, S1 |
+| **A — Jiyan** | Frontend architecture, shared UI, design system, Profile, Feed, Blog UI and frontend integration | Product Owner + Developer | 1–6 |
+| **B** | Backend foundation, auth, database, files, platform permissions, OAuth, deployment | Technical Lead + Developer | 1–6 |
+| **C** | Friends, chat, presence, notifications, reconnect recovery | Project Manager / Scrum Master + Developer | 1–6 |
+| **D** | Communities, member management, community content, Events integration | Developer | 4–6 |
+| **E** | Marketplace, unified search, filters, sorting, pagination, contact seller | Developer | 4–6 |
 
-**Duties beyond code**
+### 7.1 Duties beyond code
 
-- **A** — owns the backlog and its priority order; validates finished work against
-  the spec; is the single point of contact for evaluators.
+- **A** — owns the backlog and its priority order; validates finished work
+  against the design; is the single point of contact for evaluators.
 - **B** — owns the architecture and this document; reviews every PR touching
-  `packages/shared`, `game/`, or `gateway/`; owns the Docker/HTTPS/CI pipeline.
+  auth, permissions, storage or deployment; owns the Docker/HTTPS/CI pipeline.
 - **C** — runs the weekly meeting, keeps the milestone board honest, maintains
-  documentation, and owns the legal pages deadline.
-- **D** — owns the test suite and the demo rehearsal; every module needs its
-  acceptance test written by someone other than the author.
+  documentation and owns the legal-page deadline.
+- **D** — owns community and event integration; contributes to the test suite and
+  the demo rehearsal.
+- **E** — owns marketplace and search; contributes to the end-to-end demo and
+  search-permission checks.
 
-**Load-balancing note.** B owns the four highest-risk modules. B pairs with D on
-the engine from W3 onward, and A reviews the gateway PRs. If B becomes the
-bottleneck in W4, module #7 (tournaments) moves to A.
+### 7.2 Collaboration boundaries
 
-### 7.1 Working method
+- **A does not own all pages.** C, D and E implement the interfaces for their own
+  domains using A's shared components.
+- **B does not own all endpoints.** Each domain owner implements their handlers,
+  migrations and tests against B's conventions.
+- **C provides the notification mechanism.** Domain owners define triggers and
+  recipient rules.
+- **E provides unified search.** Domain owners provide visibility rules and query
+  support.
+- A, B and C keep the shared foundation running and help D/E ramp up in Week 4.
+- Every module is developed by its owner and tested by a different member.
 
-- Branch naming: `feat/5-remote-players`, `fix/engine-tunnel-collision`.
-- Commits: Conventional Commits, scoped — `feat(engine): add power-up expiry`.
-  Meaningful messages, because the git history *is* an evaluated deliverable.
-- PR template: what it changes, which module it advances, how it was tested,
-  which checklist items from §6.4 are satisfied.
-- Branch protection on `main`: 1 approval required, CI green, no force pushes.
-- Weekly 45-min sync (C facilitates); decisions recorded as ADRs in `docs/decisions/`.
-- Retro at the end of each week: what slipped, and does the cut order change?
+### 7.3 Working method
+
+- Branch naming: `feat/communities-membership`, `fix/event-capacity-race`.
+- Conventional Commits, scoped: `feat(events): enforce capacity in one transaction`.
+  The git history is an evaluated deliverable.
+- PR template: what it changes, which module it advances, how it was tested and
+  which Definition-of-Done items are satisfied.
+- Branch protection on `main`: one approval, green CI, no force pushes.
+- Weekly 45-minute sync (C facilitates); decisions recorded as ADRs.
+- End-of-week retro: what slipped, and does the cut order change?
 
 ---
 
 ## 8. Milestones
 
-Weeks are relative: **W0 = project kickoff.** Dates to be anchored once the team
-sets the kickoff date.
+Weeks are relative: **Week 1 = shared foundation.** Dates are anchored once the
+kickoff date is fixed.
 
-### W0 — Foundation (no code)
-- Team formed; roles agreed and written into `README.md`
-- Repository created, branch protection, PR template, CI skeleton
-- **Module claims locked** (17 + 3) — no additions after W1, only cuts
-- Wireframes: lobby, game, profile, tournament bracket, legal pages
-- Product backlog populated in GitHub Projects
+### Week 1 — Shared foundation (A, B, C)
 
-### W1 — Infrastructure
-- `docker-compose.yml`: postgres, server, web, caddy (dev + prod profiles)
-- Prisma schema + first migration + seed script
-- `.env.example` committed; `.env` git-ignored and verified ignored
-- Caddy TLS, HTTPS redirect, `/api/health` responding
-- CI: lint, typecheck, unit tests, production build
+- Agree stack, repository layout, database schema and API contracts.
+- `docker-compose.yml`: PostgreSQL, API, web, Caddy (dev and prod profiles).
+- First migrations and seed script; `.env.example`; `.env` verified ignored.
+- Auth: registration, login, logout, session handling, secure password hashing.
+- Page shell, routing, shared components, design tokens.
+- Migrate README, PLAN, `.env.example` and the Makefile away from the previous
+  project direction.
 
-*Exit criteria: `docker compose up --build` serves an HTTPS page; `/health` returns
-dependency status; CI green on `main`.*
+*Exit criteria: everyone can start the environment; two users can register and
+log in through the UI; data persists across a restart; CI is green.*
 
-### W2 — Identity (owner A)
-- Signup, login, refresh rotation, logout; argon2id hashing
-- JWT access guards, role guard skeleton
-- Profile read/update, avatar upload (type + size validated, stored outside web root)
-- Prisma-backed user records
+### Week 2 — Social loop (A, B, C)
 
-### W3 — Realtime core (owners B + D)
-- Socket.IO gateway, auth handshake, room lifecycle
-- Pure engine extracted and unit-tested (10 000-tick determinism test)
-- 1v1 loop: server-authoritative, 20 Hz snapshots, client interpolation
-- **Two laptops, one match** — the module #5 baseline
+- Profile read/update, avatar upload and default avatar.
+- Image posts, comments, likes.
+- Friend requests: send, accept, reject, remove.
+- One-to-one direct messages with persisted history and unread counts.
+- Online status and the first real-time notifications.
 
-### W4 — Robustness (owners B + D)
-- Reconnect with state restore + input-sequence resume
-- Latency handling: offset estimation, packet-loss tolerance, extrapolation cap
-- 3+ free-for-all using the same engine
-- Graceful handling of disconnects mid-match
+*Exit criteria: two users become friends, publish a photo, comment, chat and
+receive a notification; the flow survives a page reload.*
 
-### W5 — Tournaments (owner D)
-- Registration with capacity limit, seeding, single-elimination bracket
-- Auto-advance winners, byes for odd counts, champion recorded
-- Bracket UI with live progress
+### Week 3 — Core stability and handover (A, B, C)
 
-### W6 — AI + customization (owner D)
-- AI opponent: reaction delay, aim error that shrinks with difficulty, occasional
-  misses — must be beatable and must occasionally win
-- AI must respect the player's customisation settings
-- Power-ups (e.g. speed, shrink, freeze) and arena themes, with defaults
+- Blog: Markdown editor, preview, drafts, publish, edit, delete.
+- Complete file management: validation, progress, preview, access control,
+  delete and replace.
+- Design system consolidation: at least 10 reusable components.
+- Real-time recovery: reconnect, missed messages, multi-tab presence.
+- Start the event backend early: schema, CRUD, RSVP foundation.
+- Prepare D/E interfaces, components, sample data and task packs.
 
-### W7 — Product completeness (owners A + C + D)
-- S1 match history, statistics, leaderboard, XP/level
-- S2 three languages, language switcher, all user-facing strings translatable
-- S3 `/status` page, scheduled `pg_dump` backups, documented restore procedure
-- Accessibility pass: keyboard navigation, focus states, ARIA, colour contrast
-- **Privacy Policy and Terms of Service with real content** — a stated rejection
-  criterion, so this gets a hard deadline in W7 and A + C both sign off
-- Final sweep for console warnings
+*Exit criteria: core flows are demoable; D and E can start Week 4 without waiting
+for contracts or scaffolding.*
 
-### W8 — Submission buffer
-- README complete: roles, module table, architecture, how to run, screenshots
-- Per-module demo script; full dry run of the demo with timing
-- Final review pass, backup of the repository, peer feedback round
+### Week 4 — Five in parallel (all)
+
+- D: community CRUD, membership, community roles, community posts.
+- E: listing publish, browse, edit, delete, images, sale status, filters/sort/page.
+- A/B/C: OAuth, platform user and role administration, core polish.
+- A/B/C pair with D/E on integration.
+
+*Exit criteria: community and listing flows run end to end; OAuth and platform
+role management are usable.*
+
+### Week 5 — Integration (all)
+
+- Community events, RSVP, reschedule/cancel notifications and capacity checks.
+- Unified search across users, content, communities, events and listings.
+- Notification coverage for all triggers and notification settings.
+- Share-to-feed from blog, event and marketplace creation.
+- Seller contact opens a direct conversation with the listing attached.
+- **Feature freeze at the end of the week.**
+
+*Exit criteria: all 12 scoring modules are demoable; every module has a demo
+script and a second-member test.*
+
+### Week 6 — Delivery (all)
+
+- Permissions, concurrency, reconnect, file and browser checks.
+- Responsive and accessibility pass; console-warning sweep.
+- Deployment verification from a clean clone.
+- Privacy Policy and Terms of Service with real, product-specific content.
+- README final pass and full demo rehearsal with timing.
+
+*Exit criteria: a stable release candidate; all five members can explain the
+project and their own contribution.*
 
 ---
 
@@ -378,16 +472,18 @@ dependency status; CI green on `main`.*
 
 | # | Risk | Impact | Likelihood | Mitigation | Owner |
 |---|---|---|---|---|---|
-| R1 | Client/server desync | Critical — kills #2, #5, #6 | Medium | Pure engine + determinism test; server-authoritative inputs only | B |
-| R2 | B overloaded (4 high-risk modules) | High — schedule slip | High | Pair B with D from W3; A reviews gateway PRs; move #7 to A if needed | C |
-| R3 | Tournament scope creep (double elimination, seeding algorithms) | Medium | Medium | Single-elimination only; bye handling is a 20-line problem | D |
-| R4 | Legal pages left until the end → rejection | **Critical — project rejected** | Medium | Hard W7 deadline; C tracks it as its own milestone | C |
-| R5 | i18n retrofit cost explodes | Medium | Medium | All strings go through the i18n key from W1; if not done by W2, drop S2 | C |
-| R6 | Avatar upload security (path traversal, MIME spoofing) | High | Low | Validate magic bytes, not the client MIME type; random filenames; serve via a route with auth | A |
-| R7 | In-memory rooms lost on restart | Medium | Medium | Match rows marked `ABANDONED`, never counted; documented as a known limitation | B |
-| R8 | Weak demo (works but unimpressive) | High | Medium | W8 dry run with a timer; rehearse the wow-paths (3+ match, AI, tournament) | D |
-| R9 | Console warnings at submission | Medium | High | CI step greps the console output of a Playwright smoke run | C |
-| R10 | Git history does not show 4 contributors | High — evaluated | Low | Each member commits from their own account; PRs cross-review so history is interleaved | C |
+| R1 | D/E ramp-up stalls in Week 4 | High — two majors slip | High | Interfaces, components, sample data and task packs ready by end of Week 3; A/B/C pair during Week 4 | A |
+| R2 | Permission leak through search, chat or file routes | **Critical** — security failure | Medium | Central authorisation helpers; negative tests per role; search and media reuse read checks | B |
+| R3 | Event capacity race (two users, last seat) | High — data integrity | Medium | Transaction + row lock/constraint; explicit concurrency test | D |
+| R4 | Reconnect or multi-tab presence inconsistency | High — kills real-time module | Medium | Persist first, push second; cursor-based catch-up; per-user connection registry | C |
+| R5 | File upload attack (MIME spoofing, path traversal) | High — security | Low | Magic-byte validation, random storage keys, size limits, authorised download route | B |
+| R6 | OAuth provider integration delays Week 4 | Medium | Medium | Isolate the provider behind one interface; email/password remains fully functional; cut OAuth if needed | B |
+| R7 | Marketplace scope creep into payments/orders | Medium — schedule | Medium | Non-goals are explicit; "contact seller" is the v1 transaction boundary | E |
+| R8 | Legal pages left to the end → rejection | **Critical — project rejected** | Medium | Hard Week 6 deadline; C tracks it as its own milestone; A and C sign off | C |
+| R9 | Git history does not show five contributors | High — evaluated | Low | Each member commits under their own account; cross-review so history is interleaved | C |
+| R10 | A module is "almost done" and scores zero | High | Medium | Definition-of-Done gate; demo rehearsal; cut minor scope rather than ship partial majors | C |
+| R11 | Feed/search slow as seed data grows | Medium | Low | Pagination from day one; indexes from §5; query review in Week 5 | E |
+| R12 | Documentation and config drift from the implementation | Medium | Medium | Treat docs and config as part of each PR; review the protocol before handlers; keep module evidence current | A |
 
 ---
 
@@ -395,30 +491,46 @@ dependency status; CI green on `main`.*
 
 | Requirement | How it is met | Verified in |
 |---|---|---|
-| Web app: frontend + backend + database | React SPA · NestJS API · PostgreSQL | W1 |
-| Git with clear commits from all members | Conventional Commits, 1-review PR rule, protection on `main` | §7.1 |
-| Single-command containerised deployment | `docker compose up --build` | W1 |
-| Latest stable Chrome | Vite build targets `esnext`, no polyfills needed | W1 |
-| No console warnings/errors | CI smoke test greps console output | W7 |
-| Privacy Policy + Terms of Service | Footer routes, real content | W7 |
-| Multi-user support | Socket.IO rooms + presence + transactional writes | W3–W4 |
-| Responsive, accessible frontend | Tailwind responsive design, a11y pass | W7 |
-| CSS framework | Tailwind CSS | W1 |
-| Secrets in ignored `.env` + `.env.example` | Tracked in §8 W1 | W1 |
-| Clear schema with relations | Prisma, §5.6 | W1 |
-| Secure signup/login | argon2id + JWT access/refresh rotation | W2 |
-| Frontend **and** backend input validation | Shared zod schemas | W2 |
-| HTTPS everywhere | Caddy, HTTP→HTTPS redirect | W1 |
-| 14 module points | 17 committed + 3 stretch, §6 | W0–W7 |
+| Web app: frontend + backend + database | Vue 3 SPA · Go + Echo API · PostgreSQL | Week 1 |
+| Frontend and backend frameworks | Vue 3 + Vite; Go + Echo | Week 1 |
+| Git with clear commits from all members | Conventional Commits, one-review PR rule, protected `main` | §7.3 |
+| Single-command containerised deployment | `docker compose up --build` | Week 1 |
+| Latest stable Chrome | Vite build targets modern browsers | Week 6 |
+| No console warnings or errors | Playwright smoke run checks console output | Week 6 |
+| Privacy Policy + Terms of Service | Footer routes, real product-specific content | Week 6 |
+| Multi-user and concurrency support | Transactions, constraints, WebSocket hub, presence | Weeks 2–5 |
+| Responsive, accessible frontend | Tailwind responsive layout, keyboard/focus/contrast pass | Week 6 |
+| CSS framework | Tailwind CSS | Week 1 |
+| Secrets in ignored `.env` + `.env.example` | Template committed, real values ignored | Week 1 |
+| Clear schema with relations | §5, migrations in Week 1 | Week 1 |
+| Secure signup/login | Hashed + salted passwords, server-issued sessions | Week 1 |
+| Frontend **and** backend input validation | Shared validation rules and boundary checks | Weeks 1–5 |
+| HTTPS everywhere | Caddy with automatic certificates and HTTP→HTTPS redirect | Week 1 |
+| At least 14 module points | 18 committed points, §6 | Weeks 1–5 |
+| ORM | GORM models, migrations and relations | Week 1 |
+| Real-time features | WebSocket chat, notifications, presence, reconnect | Weeks 2–3 |
+| File upload management | Validation, preview, progress, access control, delete/replace | Week 3 |
+| Advanced search | Keywords, filters, sorting, pagination, visibility checks | Week 5 |
+| OAuth 2.0 | One external provider alongside email/password | Week 4 |
+| Notification system | Persistent centre covering create/update/delete triggers | Weeks 2–5 |
+| Custom design system | 10+ reusable components with shared tokens | Weeks 1–3 |
+| Organization system | User-created and managed communities | Week 4 |
 
 ---
 
 ## 11. Open decisions
 
-1. **Kickoff date** — anchors W0–W8 to real calendar dates.
-2. **Third-party GitHub org / repo** — invites the other three members so the commit
-   distribution is genuine.
-3. **AI difficulty set** — three levels or a single "casual" default?
-4. **Chat** — currently unclaimed. If the team has spare capacity in W5, a basic
-   chat + invite-to-game is 2 more points (Web Major: user interaction) and is the
-   single highest-value addition. Decide by the W5 retro.
+1. **Kickoff date** — anchors Weeks 1–6 to real calendar dates.
+2. **OAuth provider** — 42 Intra, GitHub or Google. Choose one that can be
+   demonstrated without a private account.
+3. **Shared `Content` table** — confirm in Week 1 whether the shared layer
+   simplifies Feed, comments and permissions or should be split per domain.
+4. **Deletion policy** — hard delete versus soft delete for posts, articles and
+   listings; affects retention statements in the Privacy Policy.
+5. **Upload limits** — per-file size, allowed extensions and per-user quota.
+6. **Notification defaults** — which events are on by default, and whether users
+   can mute a community or a conversation.
+7. **Moderation scope** — report, hide and ban are not claimed modules; decide
+   whether moderators get a minimal hide/remove capability in Week 5.
+8. **D/E task packs** — exact first tickets for Communities and Marketplace, ready
+   by the end of Week 3.

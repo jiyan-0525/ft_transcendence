@@ -2,10 +2,26 @@
 
 One section per claimed module. Evaluators are shown these; every claim must be
 demonstrable. Per the brief, an incomplete or non-functional module scores **zero**,
-so no module moves to "done" until all six items in the Definition of Done
-(PLAN.md §6.4) are checked.
+so no module moves to "done" until every item in the Definition of Done
+([`../PLAN.md`](../PLAN.md) §6.4) is checked.
 
-**Claimed: 17 committed points + 3 stretch = 20 maximum.**
+**Claimed: 18 points — 6 Major + 6 Minor.**
+
+## Scoring boundaries
+
+The configuration lists overlapping majors. Demonstrate each in full, not one
+standing in for the other:
+
+- **#3 User interaction** — public profiles, friend requests and basic one-to-one
+  messaging.
+- **#4 Standard user management** — registration/login, profile editing, avatar
+  with a default, friends list, live online status.
+- **#5 Organization system** — community lifecycle, membership and community
+  roles.
+- **#6 Advanced permissions** — platform-wide user CRUD and role management.
+  Editing your own post is ownership, not Advanced Permissions.
+- Blog, Events and Marketplace are product features, not extra scoring modules.
+- Advanced chat (group chat, calls), AI and game modules are outside the 18 points.
 
 ---
 
@@ -13,231 +29,224 @@ so no module moves to "done" until all six items in the Definition of Done
 
 - [ ] Runs from a clean `docker compose up --build` with no manual steps
 - [ ] No errors **and no warnings** in the browser console during the demo
-- [ ] Input validated on both frontend and backend
+- [ ] Validated on the frontend **and** the backend
 - [ ] Tested by a member other than the author
 - [ ] README section updated + demo script below is complete
 - [ ] Merged to `main` through a PR with one approving review
 
 ---
 
-## Web — Major: framework for frontend and backend (2 pts) · Owner B · ⬜
+## 1. Web — Major: frontend and backend frameworks (2 pts) · Lead A + B · 🔄 scaffold
 
-**Claim.** React 18 + Vite (frontend framework) and NestJS on Fastify (backend
-framework).
+**Claim.** Vue 3 + TypeScript + Vite (frontend), Pinia + Vue Router (state and
+routing), and Go + Echo (backend).
 
 **Demo script**
-1. Run `docker compose up --build`, open the app.
-2. Interact with the UI: navigate to the lobby, open a match.
-3. Open DevTools → Network: show REST calls to the NestJS API.
-4. Open `packages/web/package.json` and `packages/server/package.json`.
 
-**Evidence:** `packages/web/` (React), `packages/server/` (NestJS modules,
-controllers, guards).
+1. Run `docker compose up --build`; open the app.
+2. Navigate Feed → Communities → Blog → Events → Marketplace.
+3. Open DevTools → Network: show REST calls to the Go API and the `/api/health`
+   response.
+4. Open `packages/web/package.json` and `packages/server/go.mod`.
+
+**Evidence:** `packages/web/` (Vue SPA), `packages/server/` (Echo handlers,
+middleware, domain packages).
 
 ---
 
-## Web — Major: real-time features with WebSockets (2 pts) · Owner B · ⬜
+## 2. Web — Major: real-time features (2 pts) · Lead C · ⬜
 
-**Claim.** Socket.IO WebSocket gateway drives all gameplay: real-time updates
-across clients, graceful connect/disconnect, room-scoped broadcasting.
+**Claim.** A single authenticated WebSocket carries chat messages, notifications
+and presence, with persistence and reconnect recovery.
 
 **Demo script**
-1. Open two browser profiles side by side, log in as two different users.
-2. Both join the same room; move one paddle.
-3. The other screen updates live — DevTools → Network shows the WS frames.
-4. Close one tab mid-match: the opponent sees a "disconnected, 30 s to
-   reconnect" notice; reopen and the match resumes.
 
-**Evidence:** `packages/server/src/gateway/`, snapshot broadcasting per room,
-`game:state` at 20 Hz, `docs/architecture.md` §3.
+1. Sign in as two users in two browser profiles.
+2. Send a message from one; it appears for the other without a refresh.
+3. Show the online indicator on both profiles.
+4. Disable the network on one client, send a message from the other, then
+   reconnect: the missed message and notification are fetched.
+5. Open a second tab as the same user; closing one tab keeps the user online.
+
+**Evidence:** `packages/server/internal/realtime/`, `internal/chat/`,
+`internal/notifications/`, `packages/web/src/stores/`, `docs/protocol.md` §5.
 
 ---
 
-## Web — Minor: ORM (1 pt) · Owner C · ⬜
+## 3. User — Major: user interaction (2 pts) · Lead A + C · ⬜
 
-**Claim.** Prisma ORM with a relational schema, migrations, and seed script.
+**Claim.** Public profiles, a friend graph with requests/accept/reject/remove, and
+one-to-one direct messages.
 
 **Demo script**
-1. Show `packages/server/prisma/schema.prisma` and its relations.
-2. Run `make migrate` — show the generated SQL migration.
-3. Run `make seed` — show the demo users in the database.
-4. `npx prisma studio` — show a user row with a related match record.
 
-**Evidence:** schema, `prisma/migrations/`, seed script.
+1. Open a public profile from a post or search result.
+2. Send a friend request; accept it from the second account.
+3. Open Messages and send a direct message.
+4. Show the message history after a reload.
+5. Remove the friend and confirm the relationship disappears for both users.
+
+**Evidence:** `internal/users/`, `internal/friends/`, `internal/chat/`,
+`packages/web/src/views/` (Profile, Friends, Messages).
 
 ---
 
-## Gaming — Major: complete web-based game (2 pts) · Owner B · ⬜
+## 4. User — Major: standard user management (2 pts) · Lead A + B · ⬜
 
-**Claim.** A complete 2D Pong game: paddles, ball physics, scoring to 11, serve
-rotation, win/loss conditions, rules screen, scoreboard.
+**Claim.** Email/password registration and login with hashed passwords, editable
+profile, avatar upload with a default, friends list and live online status.
 
 **Demo script**
-1. Start a 1v1 match against another user.
-2. Score 11 points; the winner screen appears.
-3. The result is recorded in the profile's match history.
 
-**Evidence:** `packages/server/src/game/` engine, client rules screen.
+1. Register a new account; show the generated default avatar.
+2. Edit the username, bio and avatar; reload and confirm persistence.
+3. Sign in as a second user and show the first user's online status.
+4. Send and accept a friend request; both lists update.
+5. Sign out and confirm protected routes redirect to sign-in.
+
+**Evidence:** `internal/auth/`, `internal/users/`, `internal/friends/`,
+`packages/web/src/views/ProfileView.vue`.
 
 ---
 
-## Gaming — Major: remote players (2 pts) · Owner B + D · ⬜
+## 5. User — Major: organization system (2 pts) · Lead D · ⬜
 
-**Claim.** Two players on separate computers play the same match in real time, with
-latency tolerance, graceful disconnection, and reconnection logic.
+**Claim.** User-created communities with membership management, community roles
+and community-scoped content. A page alone is not this module; the community
+entity and its permissions are.
 
 **Demo script**
-1. Two laptops, same network — log in as two users, join the same room.
-2. Play a full point; mention the interpolation delay and server-authoritative
-   model.
-3. On one laptop, disable Wi-Fi mid-rally.
-4. The opponent sees the disconnection notice and a 30 s countdown.
-5. Re-enable Wi-Fi, reload — the score and ball position are restored and play
-   continues.
 
-**Evidence:** offset estimation, 100 ms interpolation buffer, 250 ms extrapolation
-cap, 30 s reconnect grace, `game:state` replay on reconnect.
+1. Create a community as user A; A becomes the owner.
+2. Join with user B; show the member list and B's member role.
+3. Publish a community-only post as B; it appears in the community feed.
+4. Remove B as owner; B can no longer post to the community.
+5. Show the community's events and community-scoped content.
+
+**Evidence:** `internal/communities/`, `internal/content/`,
+`packages/web/src/views/CommunitiesView.vue`.
 
 ---
 
-## Gaming — Major: multiplayer 3+ (2 pts) · Owner B + D · ⬜
+## 6. User — Major: advanced permissions (2 pts) · Lead B · ⬜
 
-**Claim.** Free-for-all with three or more simultaneous players: fair mechanics for
-everyone, synchronised state across all clients.
+**Claim.** Three enforced layers: platform roles (Admin/Moderator/User), community
+roles (Owner/Member), and content ownership (author/seller/organiser).
 
 **Demo script**
-1. Create a 4-player room from the lobby.
-2. Join with three more browser profiles.
-3. All four paddles are controlled independently and all clients show the same
-   state simultaneously.
-4. Score a point; confirm all clients update identically.
 
-**Evidence:** the same `step()` engine with N paddles; one room, one authoritative
-loop.
+1. Sign in as Admin; open Administration and change a user's role.
+2. Sign in as a regular user; request `/admin` directly and show the `403`.
+3. As a community owner, remove a member.
+4. As a non-member, request a restricted community post by ID; show `403`.
+5. As a different user, try to edit someone else's post; show `403`.
+
+**Evidence:** `internal/auth/` middleware, `internal/users/` role checks,
+`internal/communities/`, `internal/content/`, `docs/decisions/0003-permissions.md`.
 
 ---
 
-## Gaming — Minor: tournament system (1 pt) · Owner D · ⬜
+## 7. Web — Minor: ORM (1 pt) · Lead B · ⬜
 
-**Claim.** Single-elimination bracket with registration, capacity, seeding, live
-progress, and a recorded champion.
+**Claim.** GORM models, migrations and relations over PostgreSQL.
 
 **Demo script**
-1. Open Tournaments → Create (max 8 players) → register.
-2. Register four users; show the drawn bracket.
-3. Play match 1 → winner advances automatically to the next round.
-4. Finish the bracket → champion is announced and stored on the tournament record.
 
-**Evidence:** `Tournament` / `TournamentMatch` tables, bracket UI, auto-advance.
+1. Show `packages/server/internal/storage/` models and relations.
+2. Run `make migrate`; show the applied migration.
+3. Query a user with their content, community memberships and friendships.
+4. Show the schema in `psql` with foreign keys and indexes.
+
+**Evidence:** `internal/storage/`, migration files, `docs/architecture.md` §6.
 
 ---
 
-## Gaming — Minor: game customization (1 pt) · Owner D · ⬜
+## 8. User — Minor: notification system (1 pt) · Lead C · ⬜
 
-**Claim.** Power-ups and arena themes with player-selectable settings and working
-defaults.
+**Claim.** Persistent notifications covering friend requests, reactions, community
+membership changes and event changes, with read state and settings.
 
 **Demo script**
-1. Settings → enable power-ups and pick an arena theme.
-2. Play a match: power-ups spawn and affect play (paddle speed, ball speed, shrink).
-3. Change the paddle colour and theme; both persist across matches.
-4. Start a match with power-ups disabled → default Pong rules apply.
-5. Play against the AI with power-ups on → the AI uses them too.
 
-**Evidence:** `UserSettings` table, power-up logic inside `step()`.
+1. Send a friend request; the recipient sees a notification and an unread badge.
+2. Comment on a post; the author receives a notification.
+3. Add a user to a community; that user is notified.
+4. Reschedule an event; all attendees receive a notification.
+5. Mark one notification read, reload and show the unread badge decremented.
+
+**Evidence:** `internal/notifications/`, notification triggers in each domain,
+`packages/web/src/views/NotificationsView.vue`.
 
 ---
 
-## User Management — Major: user management and authentication (2 pts) · Owner A · ⬜
+## 9. Web — Minor: advanced search (1 pt) · Lead E · ⬜
 
-**Claim.** Email/password signup and login (argon2id hashed, salted); profile
-editing; avatar upload with a default; friends with add/remove and a friends list;
-online status; public profile page.
+**Claim.** Keyword search across users, content, communities, events and listings,
+with filters, sorting, pagination and visibility checks.
 
 **Demo script**
-1. Register with email and password; log out; log back in.
-2. Edit username and upload an avatar; it appears on the profile.
-3. Search for another user, send a friend request; they accept.
-4. Both users appear in each other's friends list, with live online status.
-5. Open the public profile page — stats and match history are shown.
 
-**Evidence:** `User`, `Friendship` tables; argon2id hashes in the DB (show that the
-column contains a hash, not a password); auth guards.
+1. Search a keyword that matches a post, an event and a listing.
+2. Filter by type and sort by newest; page to the next result set.
+3. Sign in as a non-member and repeat: restricted community content is absent.
+4. Sign in as a member and confirm the same item appears.
+5. Show the API response with pagination metadata.
+
+**Evidence:** `internal/search/`, domain queries, negative permission tests,
+`packages/web/src/views/SearchView.vue`.
 
 ---
 
-## AI — Major: AI opponent (2 pts) · Owner D · ⬜
+## 10. Web — Minor: file upload and management (1 pt) · Lead B · ⬜
 
-**Claim.** An AI opponent that is challenging but beatable, simulates human
-behaviour rather than perfect play, respects the player's customisation settings,
-and can explain its implementation.
+**Claim.** Images for avatars, posts, blog covers, event covers and listings; PDFs
+for community resources and event attachments; validation, progress, preview,
+access control, delete and replace.
 
 **Demo script**
-1. Lobby → Play vs AI; choose easy / medium / hard.
-2. Play each level: beat the AI on hard, lose to it on easy.
-3. Enable power-ups → the AI picks them up and uses them.
-4. Explain: the AI only produces input frames (`paddleUp` / `paddleDown`); it
-   never modifies game state, so it obeys exactly the same physics as a human.
-   Difficulty is expressed as reaction delay, aim error, and a miss probability.
 
-**Evidence:** `packages/server/src/ai/` policy module; same input interface as
-humans.
+1. Upload an oversized or wrong-type file; show the backend rejection.
+2. Upload a valid image; show progress and preview.
+3. Replace the image; confirm the old file is no longer served.
+4. Upload a PDF attachment to a restricted event; open it as a member.
+5. Request the same file as a non-member; show `403`.
+6. Delete the post; confirm its attachments are removed.
+
+**Evidence:** `internal/media/`, `ContentAttachment` / `MediaFile` models,
+`docs/architecture.md` §8.
 
 ---
 
-## Stretch — User Management: game statistics and match history (1 pt) · Owner D · ⬜
+## 11. Web — Minor: custom design system (1 pt) · Lead A · ⬜
 
-**Claim.** Persistent statistics (wins, losses, draws, rating, XP/level),
-chronological match history with opponents and dates, and a global leaderboard.
+**Claim.** At least 10 reusable components with shared colour, typography, spacing
+and icon rules, used across the product.
 
 **Demo script**
-1. Play three matches (win, loss, win).
-2. Profile → Statistics: totals, rating, level progress bar.
-3. Profile → History: each match with date, opponent and score.
-4. Leaderboard: rank by rating or wins; show own position highlighted.
+
+1. Open the component gallery route.
+2. Show buttons, inputs, forms, cards, avatars, badges, tabs, modals, menus and
+   empty states.
+3. Change a design token; show the components update together.
+4. Navigate Feed, Profile and Marketplace; show the same components in use.
+
+**Evidence:** `packages/web/src/components/`, token definitions, gallery view.
 
 ---
 
-## Stretch — A11y/i18n: three languages with a switcher (1 pt) · Owner C · ⬜
+## 12. User — Minor: OAuth 2.0 authentication (1 pt) · Lead B · ⬜
 
-**Claim.** EN, DE and FR; all user-facing text translatable; language switcher in
-the UI; choice persisted.
-
-**Demo script**
-1. Switch EN → DE → FR from the header; every screen follows, including the game
-   HUD and legal pages.
-2. Reload — the language persists.
-3. Navigate the entire app using only the keyboard; focus is visible throughout.
-
----
-
-## Stretch — DevOps: health/status page with backups (1 pt) · Owner C · ⬜
-
-**Claim.** Health check and status page with dependency status, plus automated
-backups with a documented restore procedure.
+**Claim.** One external OAuth provider alongside email/password login, with
+account linking and a safe error path.
 
 **Demo script**
-1. Open `/status`: database, API and WebSocket gateway report status and latency.
-2. `/api/health` returns JSON consumed by the container healthcheck.
-3. Show the scheduled `pg_dump` job and a backup artefact.
-4. Documented restore: restore into a scratch database and show the user count.
 
----
+1. Sign in with the configured provider; complete the profile.
+2. Show the linked provider on the account settings page.
+3. Sign out, sign in again with the provider; the same account is used.
+4. Link the provider to an existing email/password account.
+5. Cancel the provider consent screen; the app returns to sign-in without an
+   error state.
 
-## Rejected / not claimed
-
-Recorded so evaluators do not expect these:
-
-| Module | Why not |
-|---|---|
-| Public API | Needs 5 documented endpoints, key management, rate limiting, and docs — better spent on a game that works |
-| Advanced search | Low value without large searchable content |
-| OAuth 2.0 | Nice, but authentication is already scored and solid |
-| Spectator mode | Cute, not enough to justify the state-broadcast work alongside tournaments |
-| SSR | Adds deployment and hydration complexity for an app that is inherently behind a login |
-| Microservices | Premature for this scale; would hurt the single-command requirement |
-| WAF + HashiCorp Vault | Infrastructure the team cannot operate or demonstrate reliably in the time available |
-| Blockchain | Largest external dependency of any module, for one point |
-
-If capacity appears in W5, the highest-value addition is a **basic chat with
-invite-to-game** (Web Major: user interaction, 2 pts) — see PLAN.md §11.
+**Evidence:** `internal/auth/` OAuth flow, `OAuthAccount` model, callback route,
+`docs/decisions/0001-stack.md`.

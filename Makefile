@@ -1,15 +1,15 @@
 .DEFAULT_GOAL := help
 COMPOSE := docker compose
 
-.PHONY: help up down restart build logs seed migrate test lint typecheck smoke clean
+.PHONY: help up down restart build logs migrate seed test test-server test-web lint typecheck dev-server dev-web clean
 
 help: ## Show available targets
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
 up: ## Start the whole stack
 	$(COMPOSE) up --build -d
-	@echo "App:    https://localhost:3000"
-	@echo "Health: https://localhost:3000/api/health"
+	@echo "App:    https://localhost:$${WEB_PORT:-8080}"
+	@echo "Health: https://localhost:$${API_PORT:-3000}/api/health"
 
 down: ## Stop the stack
 	$(COMPOSE) down
@@ -24,27 +24,33 @@ build: ## Build images without starting
 logs: ## Tail logs from all services
 	$(COMPOSE) logs -f
 
-seed: ## Reset and seed the database with demo users
-	$(COMPOSE) exec api npx prisma migrate reset --force --skip-generate
-	$(COMPOSE) exec api npm run seed
-
 migrate: ## Run pending database migrations
-	$(COMPOSE) exec api npx prisma migrate deploy
+	$(COMPOSE) exec server go run ./cmd/migrate up
 
-test: ## Run the full test suite
-	$(COMPOSE) exec api npm run test
-	$(COMPOSE) exec web npm run test
+seed: ## Reset and seed the database with demo data
+	$(COMPOSE) exec server go run ./cmd/seed
 
-lint: ## Lint server and web
-	$(COMPOSE) exec api npm run lint
-	$(COMPOSE) exec web npm run lint
+test: test-server test-web ## Run the full test suite
 
-typecheck: ## Type-check server and web
-	$(COMPOSE) exec api npm run typecheck
-	$(COMPOSE) exec web npm run typecheck
+test-server: ## Run Go tests
+	cd packages/server && go test ./...
 
-smoke: ## Run the Playwright smoke test and fail on any console warning
-	$(COMPOSE) exec web npm run test:e2e
+test-web: ## Run frontend tests
+	cd packages/web && npm run test
 
-clean: ## Stop the stack and delete volumes (destroys the database)
+lint: ## Lint the server and the web app
+	cd packages/server && go vet ./...
+	cd packages/web && npm run lint
+
+typecheck: ## Type-check the server and the web app
+	cd packages/server && go vet ./...
+	cd packages/web && npm run typecheck
+
+dev-server: ## Run the Go API locally on :3000
+	cd packages/server && go run ./cmd/server
+
+dev-web: ## Run the Vite dev server locally
+	cd packages/web && npm run dev
+
+clean: ## Stop the stack and delete volumes (destroys the database and uploads)
 	$(COMPOSE) down -v

@@ -1,368 +1,172 @@
-# Sprint 1 — Vue 3 + Go Echo Application Framework Scaffold
+# Sprint 1 — Shared Foundation (Week 1)
 
-**Module:** #1 — Major: framework for frontend **and** backend (2 pts)
-**Jira parent:** FT-3 (Story, High priority, assignee: Jiyan Wang)
-**Jira sprint:** Sprint 1 · Foundation (D1–7)
-**Jira planned duration:** D1–2 (Week 1, Days 1–2)
-**Stack:** Vue 3 + TypeScript + Vite frontend; Go + Echo backend; native JSON WebSocket
-**Branch:** `FT-3-sprint-1-vue-3-go`
+**Modules advanced:** #1 frameworks (Major), #7 ORM (Minor), #11 design system
+(Minor), #4 user management (start)
+**Owners:** A, B, C
+**Duration:** Week 1
+**Status:** in progress
 
----
-
-## Context
-
-**Stack pivot:** The original `PLAN.md` describes React + NestJS + Socket.IO + Prisma. The team has pivoted to **Vue 3 + TypeScript + Vite** and **Go + Echo** with native JSON WebSocket, as documented in `docs/protocol.md`.
-
-**What exists today:**
-- Go Echo server with only `GET /api/health` (`packages/server/cmd/server/main.go`)
-- Empty `packages/web/` directory (no frontend code at all)
-- No Docker Compose, no Dockerfiles, no CI, no Vite config
-- `.env.example` and `Makefile` still reference the old NestJS/Prisma stack
-
-**What Sprint 1 delivers:** A working 1v1 remote Pong prototype — two browsers, one match, server-authoritative game loop.
+This plan supersedes the earlier sprint plan from the previous project direction.
+The product is the Community &
+Content Platform described in [`../Project design.pdf`](../Project%20design.pdf),
+[`../README.md`](../README.md) and [`../PLAN.md`](../PLAN.md).
 
 ---
 
-## Sprint goal
+## Goal
 
-Two people on two different laptops can:
-1. Open the app in a browser
-2. One creates a room, the other joins it
-3. Play a real-time 1v1 Pong match with server-authoritative physics
+By the end of Week 1 the team has one runnable, HTTPS-served application with a
+shared layout, authentication, a migrated PostgreSQL schema and a stable API
+contract. Two users can register and sign in through the UI, and their data
+survives a restart.
 
----
-
-## Workstream A — Frontend Scaffold (Vue 3 + TS + Vite)
-
-### A1. Project setup
-
-```
-packages/web/
-├── package.json
-├── vite.config.ts
-├── tsconfig.json
-├── tailwind.config.js
-├── postcss.config.js
-├── index.html
-├── src/
-│   ├── main.ts
-│   ├── App.vue
-│   ├── router/index.ts
-│   ├── types/protocol.ts
-│   ├── lib/
-│   │   ├── ws.ts
-│   │   └── api.ts
-│   ├── stores/
-│   │   └── game.ts
-│   ├── components/
-│   │   ├── GameCanvas.vue
-│   │   ├── Paddle.vue
-│   │   └── Ball.vue
-│   ├── views/
-│   │   ├── HomeView.vue
-│   │   └── GameView.vue
-│   └── assets/
-└── tests/
-    └── protocol.test.ts
-```
-
-**Dependencies:** `vue`, `vue-router`, `pinia`, `tailwindcss`, `vite`, `typescript`, `vitest`
-
-### A2. WebSocket client (`src/lib/ws.ts`)
-
-- Connect to `ws://localhost:3000/ws/game` (dev) or `wss://...` (prod)
-- JSON envelope `{ type, payload }`
-- Auto-reconnect with exponential backoff
-- Typed `send(type, payload)` and `onMessage(handler)` API
-
-### A3. Game canvas renderer
-
-- Canvas 2D, normalized coordinates (0.0–1.0 from server)
-- Interpolation buffer (100ms delay) between snapshots
-- Keyboard input: ArrowUp / ArrowDown → `game:input { seq, dir }`
-- Render: ball, two paddles, scores, status (WAITING / PLAYING / PAUSED / FINISHED)
-
-### A4. Type definitions (`src/types/protocol.ts`)
-
-Mirror every message from `docs/protocol.md` §4–5 as TypeScript interfaces:
-
-```ts
-export type ClientMessage =
-  | { type: 'game:create'; payload: Record<string, never> }
-  | { type: 'game:join'; payload: { roomId: string } }
-  | { type: 'game:input'; payload: { seq: number; dir: -1 | 0 | 1 } }
-
-export type ServerMessage =
-  | { type: 'game:created'; payload: { roomId: string; playerId: string } }
-  | { type: 'game:joined'; payload: { roomId: string; playerId: string } }
-  | { type: 'game:state'; payload: GameStateSnapshot }
-  | { type: 'game:player_left'; payload: { roomId: string; playerId: string } }
-  | { type: 'game:error'; payload: { code: string; message: string } }
-
-export interface GameStateSnapshot {
-  roomId: string
-  tick: number
-  status: 'WAITING' | 'PLAYING' | 'PAUSED' | 'FINISHED'
-  ball: { x: number; y: number }
-  paddles: Record<string, { y: number }>
-  scores: Record<string, number>
-}
-```
+This is a foundation sprint, not a feature sprint. The social loop starts in
+Week 2.
 
 ---
 
-## Workstream B — Backend Scaffold (Go + Echo)
+## Scope
 
-### B1. Project structure
+### In scope
 
-```
-packages/server/
-├── go.mod
-├── go.sum
-├── cmd/server/
-│   └── main.go
-├── internal/
-│   ├── handler/
-│   │   ├── health.go
-│   │   └── ws.go
-│   ├── game/
-│   │   ├── engine.go
-│   │   ├── state.go
-│   │   ├── room.go
-│   │   ├── loop.go
-│   │   └── engine_test.go
-│   ├── protocol/
-│   │   ├── message.go
-│   │   ├── validate.go
-│   │   └── errors.go
-│   └── hub/
-│       └── hub.go
-```
+- Repository layout and package boundaries for Go and Vue.
+- Docker Compose: PostgreSQL, Go API, Vue web, Caddy.
+- GORM models, first migration and seed data.
+- Email/password registration, login, logout and session handling.
+- App shell: header, navigation, footer, route placeholders, responsive layout.
+- Shared design tokens and the first reusable components.
+- Health endpoint, structured errors, request logging, CORS.
+- CI: Go vet/test, Vue typecheck/lint/test/build.
+- Updated README, PLAN, `.env.example`, Makefile, protocol and module claims.
 
-**Go dependencies:** `github.com/labstack/echo/v4`, `github.com/gorilla/websocket`, `github.com/google/uuid`
+### Out of scope
 
-### B2. WebSocket endpoint (`handler/ws.go`)
-
-- `GET /ws/game` → upgrade via `gorilla/websocket`
-- Read loop: parse JSON envelope, route by `type`
-- Write loop: send messages from per-connection channel
-- On disconnect: broadcast `game:player_left`, cleanup room
-
-### B3. Room management (`game/room.go`)
-
-- Room: 6-char alphanumeric ID, 2 player seats, game state, status
-- **Create:** generate ID, assign p1, status = WAITING
-- **Join:** validate room exists + not full, assign p2, status = PLAYING
-- **Leave/disconnect:** broadcast `game:player_left`, cleanup
-
-### B4. Game engine (`game/engine.go`)
-
-```go
-type GameState struct {
-    Tick    int64
-    Status  string             // WAITING | PLAYING | PAUSED | FINISHED
-    Ball    Ball
-    Paddles map[string]Paddle
-    Scores  map[string]int
-}
-
-type InputFrame struct {
-    Seq int64
-    Dir int // -1 up, 0 stationary, 1 down
-}
-
-func Step(state GameState, inputs map[string]InputFrame, dt float64) GameState
-```
-
-- Pure function: paddle movement, wall bounce, paddle bounce, scoring, ball reset
-- Deterministic: no `math/rand` — use fixed seed or initial velocity
-
-### B5. Game loop (`game/loop.go`)
-
-- Per-room goroutine, 60 Hz (`time.Ticker` at 16.67ms)
-- Accumulator pattern for fixed timestep
-- Collect latest input per player per tick
-- Broadcast `game:state` at 20 Hz (every 3rd tick)
-- Snapshot includes: tick, status, ball, paddles, scores
-
-### B6. Protocol validation (`protocol/validate.go`)
-
-| Error code | When |
-|---|---|
-| `INVALID_JSON` | Message is not valid JSON |
-| `UNKNOWN_TYPE` | `type` is not a known message type |
-| `INVALID_PAYLOAD` | Payload shape is wrong for the type |
-| `ROOM_NOT_FOUND` | Room ID does not exist |
-| `ROOM_FULL` | Room already has 2 players |
-| `NOT_IN_ROOM` | Sender is not a player in the room |
-| `INVALID_INPUT` | `seq` or `dir` is out of range |
-
-### B7. Tests (`game/engine_test.go`)
-
-- 10,000 ticks from fixed state with scripted inputs
-- Assert final state hash equals checked-in constant
-- Assert replaying same inputs produces identical hash
-- Assert no NaN or Infinity values
+- Posts, comments, friends, chat, communities, events, marketplace.
+- OAuth, platform role administration and notifications.
+- File uploads beyond the avatar contract.
+- Final legal text (drafted in Week 6).
 
 ---
 
-## Workstream C — Infrastructure
+## Workstreams
 
-### C1. Docker Compose (`docker-compose.yml`)
+### A — Frontend foundation
 
-```yaml
-services:
-  db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+| # | Task | Output |
+|---|---|---|
+| A1 | Confirm Vue 3 + TypeScript + Vite + Pinia + Vue Router | Working dev server |
+| A2 | Build the app shell: header, primary navigation, footer, responsive container | `App.vue` |
+| A3 | Add routes for Feed, Profile, Friends, Communities, Blog, Events, Marketplace, Messages, Notifications, Search, Admin, Login, Legal | `router/index.ts` |
+| A4 | Define design tokens: colour, typography, spacing, radius, focus ring | Tailwind config + CSS variables |
+| A5 | Build the first 10 reusable components (button, input, textarea, form field, card, avatar, badge, tabs, modal, empty state) | `components/` |
+| A6 | Build sign-in and registration screens against the API contract | `views/auth/` |
+| A7 | Add an API client with typed errors, request IDs and session handling | `lib/api.ts` |
+| A8 | Add a WebSocket client skeleton: connect, reconnect, typed envelope | `lib/ws.ts` |
+| A9 | Add auth and guest route guards | Router middleware |
 
-  server:
-    build: ./packages/server
-    environment:
-      API_PORT: "3000"
-      DATABASE_URL: ${DATABASE_URL}
-    ports:
-      - "3000:3000"
-    depends_on:
-      - db
+**Acceptance:** the app starts, all routes render, the shell is responsive, the
+auth screens submit to the API and the browser console is clean.
 
-  web:
-    build: ./packages/web
-    environment:
-      VITE_API_URL: http://localhost:3000
-      VITE_WS_URL: ws://localhost:3000
-    ports:
-      - "8080:80"
-    depends_on:
-      - server
+### B — Backend and data foundation
 
-volumes:
-  pgdata:
-```
+| # | Task | Output |
+|---|---|---|
+| B1 | Establish the Go package layout from `docs/architecture.md` §3 | `internal/` packages |
+| B2 | Configuration loader: env parsing, required-secret checks, safe defaults | `internal/config/` |
+| B3 | PostgreSQL connection, pool limits and health check | `internal/storage/` |
+| B4 | GORM models for `User`, `Session`, `OAuthAccount`, `FriendRequest`, `Friendship` | models + relations |
+| B5 | First migration and seed script | `make migrate`, `make seed` |
+| B6 | Registration, login, logout, refresh and `GET /api/auth/me` | `internal/auth/` |
+| B7 | Password hashing (argon2id or bcrypt), session revocation, secure cookies | auth tests |
+| B8 | Echo middleware: request ID, structured logging, recovery, CORS, auth | `internal/handler/` |
+| B9 | Stable error shape and input validation helpers | `internal/handler/errors.go` |
+| B10 | Expand `/api/health` and add `/api/status` dependency checks | handler + tests |
+| B11 | Dockerfiles, Compose services and Caddy configuration | `docker-compose.yml` |
 
-### C2. Dockerfiles
+**Acceptance:** `docker compose up --build` starts the stack; the schema migrates;
+two users register and log in; `/api/health` and `/api/status` respond; auth tests
+pass.
 
-- `packages/server/Dockerfile` — `golang:1.26-alpine` build, `distroless/static` run
-- `packages/web/Dockerfile` — `node:22-alpine` build, `nginx:alpine` serve + proxy `/api` and `/ws`
+### C — Integration, quality and handover
 
-### C3. CI (`.github/workflows/ci.yml`)
+| # | Task | Output |
+|---|---|---|
+| C1 | Repository hygiene: remove obsolete files and stale config | clean tree |
+| C2 | CI workflow: Go vet/test, Vue lint/typecheck/test/build | green CI |
+| C3 | Pin the API and WebSocket contracts in `docs/protocol.md` | reviewed contract |
+| C4 | Seed demo accounts and sample communities/content for Weeks 2–5 | `seed` data |
+| C5 | Prepare D/E task packs: interfaces, routes, components, sample data | `docs/` + Jira tickets |
+| C6 | Legal page structure and footer links | placeholder routes |
+| C7 | Definition-of-Done checklist per module | `docs/module-claims.md` |
+| C8 | Week 1 demo rehearsal | recorded flow |
 
-- **Lint:** `golangci-lint` (Go), `eslint` + `prettier` (Vue)
-- **Typecheck:** `go vet ./...`, `vue-tsc --noEmit`
-- **Test:** `go test ./...`, `vitest run`
-- **Build:** `go build ./...`, `vite build`
-
-### C4. `.env.example` (updated)
-
-```
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=change_me
-POSTGRES_DB=transcendence
-DATABASE_URL=postgresql://postgres:change_me@db:5432/transcendence
-
-API_PORT=3000
-WEB_PORT=8080
-
-VITE_API_URL=http://localhost:3000
-VITE_WS_URL=ws://localhost:3000
-
-TICK_RATE=60
-SNAPSHOT_RATE=20
-INTERPOLATION_DELAY_MS=100
-RECONNECT_GRACE_MS=30000
-```
-
-### C5. Makefile (updated targets)
-
-```makefile
-up:        docker compose up --build -d
-down:      docker compose down
-build:     docker compose build
-logs:      docker compose logs -f
-test:      go test ./... && npm run test --prefix packages/web
-lint:      golangci-lint run && npm run lint --prefix packages/web
-```
+**Acceptance:** CI is green on `main`; D and E can start Week 4 work without
+waiting for contracts or sample data; the demo runs from a clean clone.
 
 ---
 
-## Execution order
+## Deliverables
 
-| Step | Task | Est. hours |
-|------|------|------------|
-| 1 | Scaffold `packages/web/` (Vite + Vue 3 + TS + Tailwind) | **Done** |
-| 2 | Define `src/types/protocol.ts` + `src/lib/ws.ts` | **Done** |
-| 3 | Build `GameCanvas.vue`, `GameView.vue`, `HomeView.vue` | 3–4 |
-| 4 | Scaffold Go WebSocket handler + room management | 3–4 |
-| 5 | Implement `game/engine.go` (pure step function) | 2–3 |
-| 6 | Implement `game/loop.go` (60 Hz tick + broadcast) | 2 |
-| 7 | Protocol validation + error codes | 1 |
-| 8 | Go tests (engine determinism) | 1 |
-| 9 | Wire frontend WS client to backend | 1–2 |
-| 10 | Docker Compose + Dockerfiles + CI | 2–3 |
-| 11 | Update `.env.example`, Makefile, README | 1 |
-| 12 | End-to-end test: two browsers, one match | 1 |
-
-**Total: ~20–25 hours** for a working Sprint 1 demo.
+| Deliverable | Owner | Evidence |
+|---|---|---|
+| Runnable Compose stack with HTTPS | B | `docker-compose.yml`, Caddy config |
+| Database schema and first migration | B | GORM models, migration files |
+| Registration and login | A + B | UI screens, auth handlers, tests |
+| App shell and route scaffold | A | `packages/web/src/` |
+| 10 reusable components | A | `packages/web/src/components/` |
+| API contract draft | C | `docs/protocol.md` |
+| CI pipeline | C | `.github/workflows/ci.yml` |
+| Updated project documentation | A + C | README, PLAN, this file |
+| D/E task packs | C | tickets and sample data |
 
 ---
 
-## Progress log
+## Exit criteria
 
-| Date | Step | Status |
-|------|------|--------|
-| Oct 19 | Step 1 — Scaffold `packages/web/` (Vite + Vue 3 + TS + Tailwind) | Done |
-| Oct 19 | Step 2 — `src/types/protocol.ts` + `src/lib/ws.ts` (in `stores/game.ts`) | Done |
-
-**What exists now:** `packages/web/` has Vite + Vue 3 + TS + Tailwind + Pinia + Vue Router, with protocol types, game store, Home/Game views, and Vite proxy config for `/api` and `/ws`.
-
-**Next up:** Step 3 (`GameCanvas.vue` — canvas renderer) or Step 4 (Go WebSocket handler + rooms).
-
-> **Jira timeline:** FT-3 is planned for **D1–2** of Sprint 1 (the sprint runs D1–7). The scaffold must be done by end of Day 2, leaving D3–7 for the remaining subtasks (FT-28, FT-29, FT-34) and the sprint goal of an online Pong room demo.
+1. `docker compose up --build` works from a clean clone with only `.env` filled in.
+2. Two users register, log in, reload and remain logged in.
+3. `/api/health` returns `200`; `/api/status` reports the database.
+4. `make test`, `make lint` and `make typecheck` pass locally and in CI.
+5. Every route in the app shell renders without console errors or warnings.
+6. D and E have written tasks, interfaces and sample data for Week 4.
+7. The obsolete documentation, configuration and UI are gone from `main`.
 
 ---
 
-## Jira ticket mapping
+## Suggested day plan
 
-**Parent:** FT-3 — Sprint 1 · Vue 3 + Go Echo application framework scaffold (2 pts planned)
-
-| Ticket | Title | Scope | Status |
-|--------|-------|-------|--------|
-| **FT-3** | Sprint 1 scaffold (parent) | Overall framework + 2 pts module | In Arbeit |
-| **FT-25** | D1–2 Vue/Vite/Tailwind app setup | Frontend scaffold | To do |
-| **FT-26** | D1–2 Go Echo backend, REST health endpoint & JSON contracts | Backend scaffold | Done |
-| **FT-27** | D2 HTTPS reverse-proxy integration | Caddy TLS + proxy | To do |
-| **FT-28** | WS upgrade + `game:create` / `game:join` / disconnect | WebSocket rooms | Pending |
-| **FT-29** | `game:input` validation + `game:state` broadcast | Input + broadcast | Pending |
-| **FT-34** | Server game loop + physics | 60 Hz engine | Pending |
+| Day | A | B | C |
+|---|---|---|---|
+| 1 | App shell and routing | Package layout, config | Repo hygiene, CI skeleton |
+| 2 | Design tokens and components | DB connection, GORM models | Contract review, seed plan |
+| 3 | Auth screens | Auth handlers and sessions | CI: Go and Vue checks |
+| 4 | API client and guards | Error shape, middleware | Protocol update |
+| 5 | WS client skeleton | Compose, Caddy, health/status | Seed data and task packs |
+| 6 | Integration fixes | Integration fixes | Negative permission tests |
+| 7 | Demo rehearsal | Demo rehearsal | Demo rehearsal and retro |
 
 ---
 
-## Definition of Done (Module #1)
+## Dependencies and risks
 
-Per `PLAN.md` §6.4 — all six must pass:
-
-- [ ] Runs from a clean `docker compose up --build`
-- [ ] Zero errors and zero warnings in the browser console
-- [ ] Validated on both frontend and backend
-- [ ] Tested by a second team member
-- [ ] README section + demo script in `docs/module-claims.md`
-- [ ] Merged to `main` via PR with at least one approving review
+| Risk | Mitigation | Owner |
+|---|---|---|
+| Compose/Caddy blocks local work | Run Go and Vite directly until Compose lands | B |
+| Auth contract drifts between Vue and Go | `docs/protocol.md` is the single source; review both sides | C |
+| Design system becomes a side project | Only the 10 components needed by Week 2 | A |
+| Docker on every laptop differs | Pin image versions; document prerequisites | B |
+| Scope creeps into social features | Week 1 exit criteria are auth + shell + schema only | C |
+| D/E idle in Week 4 | Task packs and sample data are a Week 1 deliverable | C |
 
 ---
 
-## Risks and mitigations
+## Handover to Week 2
 
-| Risk | Mitigation |
-|------|-------------|
-| WebSocket proxy in dev (Vite → Go) | Vite `server.proxy` for `/ws` → `ws://localhost:3000` |
-| Canvas render performance at 60fps | `requestAnimationFrame`, not Vue reactivity, for ball/paddle |
-| Echo + gorilla/websocket compatibility | `e.GET("/ws/game", ...)` with `websocket.Upgrader` handler |
-| Message type drift between Go/TS | Single source of truth: `docs/protocol.md`, review checklist |
-| Stack pivot leaves stale docs | Update PLAN.md, README.md, .env.example, Makefile together |
+Week 2 starts only when the exit criteria are met. The Week 2 team builds on:
+
+- the session and role model from B,
+- the app shell, API client and components from A,
+- the protocol, seed data and test conventions from C.
+
+Week 2 scope: profile and avatar, image posts, comments and likes, friend
+requests, direct messages, online status and basic notifications.

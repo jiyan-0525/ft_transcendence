@@ -1,147 +1,210 @@
 # Privacy Policy
 
-**Last updated:** [W7 — date to be set]
-**Applies to:** Multiplayer Pong Arena ("the Service"), operated by the
+**Last updated:** [Week 6 — final date to be set]
+**Applies to:** Community & Content Platform ("the Service"), operated by the
 ft_transcendence student team.
 
 ---
 
 ## 1. Summary
 
-We collect the minimum we need to run a real-time multiplayer game: an account,
-your in-game activity, and the technical data required to keep connections stable.
-We do not sell your data, we do not run advertising, and we do not share your data
-with third parties for marketing purposes.
+We collect the minimum data needed to run a social platform: an account, the
+profile and content you choose to publish, your messages, community and event
+membership, marketplace listings, and the technical data required to keep the
+service secure and connected.
+
+We do not sell your data, run advertising, or share your data with third parties
+for marketing.
+
+---
 
 ## 2. Who is responsible
 
-The Service is operated by a student team. For any question about this policy or
-your data, contact **privacy@pong-arena.example** — the address is configured per
-deployment and reachable from the footer of the application.
+The Service is operated by a student team as part of the 42 Heilbronn curriculum.
+For questions about this policy or your data, contact
+**privacy@transcendence.example**. The address is configured per deployment and is
+reachable from the application footer.
+
+---
 
 ## 3. Data we collect
 
 ### 3.1 Account data (required)
 
-| Data | Why |
+| Data | Why it is stored |
 |---|---|
-| Email address | Login identifier and account recovery |
-| Username | Displayed in the lobby, matches, tournaments and leaderboards |
-| Password hash | We store **only** an argon2id hash with a unique salt — never your password |
-| Role | Distinguishes player, moderator and administrator |
-| Preferred language | Remembers your language choice between visits |
+| Email address | Login, account recovery and security notices |
+| Username | Your public identity on the platform |
+| Password hash | Authentication; the raw password is never stored |
+| Platform role | Distinguishes user, moderator and administrator |
+| Session records | Keep you signed in and let you revoke sessions |
+| OAuth account link | Sign in with the configured external provider |
 
-### 3.2 Data you choose to provide
+### 3.2 Profile data you choose to provide
 
-| Data | Why |
+| Data | Visibility |
 |---|---|
-| Profile avatar | Publicly visible to other players; stored with a randomly generated filename |
-| Profile display name | Publicly visible |
-| Friend list | Visible to you and, for each friend, to that friend |
+| Avatar | Public unless you remove it; a default avatar is generated |
+| Bio | Visible according to your profile visibility |
+| Friend list | Visible to you and your friends |
+| Online status | Visible to friends and to users who can see your profile |
+| Locale and notification settings | Private to you |
 
-You may play the game **without** uploading an avatar; a generated default is used.
+You can use the Service without adding a bio or uploading an avatar.
 
-### 3.3 Gameplay data (created automatically)
+### 3.3 Content you publish
 
-Match results (score, opponent, duration, win/loss), cumulative statistics and
-rating, tournament participation and results, and achievement progress. This data
-is necessary for the leaderboard and match history features.
+Posts, articles, comments, reactions, community posts, event descriptions,
+marketplace listings and uploaded images or PDFs. Published content is visible to
+the audience you selected (public, friends, community or private). Private drafts
+are visible only to you.
 
-### 3.4 Technical data
+### 3.4 Messages
 
-Your IP address and connection metadata are processed by our servers to open and
-maintain WebSocket connections, enforce rate limits, and prevent abuse. We do not
-store IP addresses in the user database. Server logs are retained for a limited
-period (see §6).
+One-to-one conversations, message bodies, timestamps and read state. Messages are
+visible to the participants and are stored so history and unread counts work. We
+do not scan message content for advertising.
 
-### 3.5 Cookies
+### 3.5 Communities and events
 
-We set **one** first-party cookie containing a rotating refresh token, so you stay
-logged in across visits. It is `HttpOnly`, `Secure`, and `SameSite=Strict`. We use
-no advertising or cross-site tracking cookies.
+Community membership, community role (owner/member), event RSVPs and attendance
+state. Community owners and event organisers can see the membership or attendee
+information needed to run their community or event.
+
+### 3.6 Marketplace data
+
+Listing title, description, price, category, condition, images and sale status.
+Listings are public. Contacting a seller opens a private conversation; the listing
+link is attached to that conversation.
+
+### 3.7 Technical data
+
+IP address, user agent, request timestamps, request IDs, error logs, session and
+security events. This data is used to operate the service, enforce rate limits,
+diagnose failures and prevent abuse.
+
+### 3.8 Cookies and local storage
+
+We use an HTTP-only session cookie for authentication and local storage for
+interface preferences. We do not use advertising or cross-site tracking cookies.
+Signing out revokes the session cookie.
+
+---
 
 ## 4. How we use your data
 
-- To authenticate you and keep your session alive
-- To match you with opponents and run tournaments
-- To display your profile, statistics and leaderboard position to other players
-- To show you your match history
-- To keep the service secure, prevent cheating and enforce rate limits
-- To comply with legal obligations
+- To create and secure your account.
+- To show your profile, content and presence to the audience you selected.
+- To deliver messages, notifications and community or event updates.
+- To enforce permissions and capacity rules.
+- To search content you are allowed to see.
+- To detect abuse, rate-limit requests and keep the service available.
+- To comply with legal obligations.
 
-We do not use your data for automated decision-making or profiling.
+We do not use your content or messages to train advertising profiles.
+
+---
 
 ## 5. Legal bases (GDPR)
 
-| Processing | Legal basis |
+| Purpose | Legal basis |
 |---|---|
-| Account creation and authentication | Performance of a contract (Art. 6(1)(b)) |
-| Gameplay, statistics, leaderboard | Performance of a contract (Art. 6(1)(b)) |
-| Security logging and abuse prevention | Legitimate interest (Art. 6(1)(f)) |
-| Email for account notifications | Consent (Art. 6(1)(a)), withdrawable |
+| Account, authentication and security | Performance of a contract (Art. 6(1)(b)) |
+| Publishing content and messages you request | Performance of a contract (Art. 6(1)(b)) |
+| Abuse prevention and service security | Legitimate interests (Art. 6(1)(f)) |
+| Legal compliance and valid authority requests | Legal obligation (Art. 6(1)(c)) |
+
+Where consent is required, it is requested separately and can be withdrawn.
+
+---
 
 ## 6. Retention
 
-| Data | Retained |
+| Data | Retention |
 |---|---|
 | Account and profile | Until you delete your account |
-| Match history and statistics | Until you delete your account, or 12 months of inactivity |
-| Refresh tokens | Until revoked, logged out, or 7 days after issue |
-| Server logs | 14 days, then deleted |
-| Backups | 30 days rolling window |
+| Published content | Until you delete it or delete your account |
+| Messages | Until you delete the conversation or your account, subject to the other participant's copy |
+| Session records | Until expiry or revocation |
+| Security and request logs | 30 days, unless needed for an incident |
+| Backups | Rotated on a fixed schedule and deleted after the retention window |
+
+Deleting your account removes or anonymises your personal data, except records we
+must keep for security or legal reasons. Content you shared with others may remain
+in their conversations or copies; it is no longer attributed to you where
+technically possible.
+
+---
 
 ## 7. Sharing
 
-We do **not** sell or rent your data. We share it only with:
+We share data only with:
 
-- **Our hosting provider** (Docker-hosting infrastructure), solely to run the Service
-- **Nobody else**, unless required by law
+- **Infrastructure providers** that host the application, database and file
+  storage, under processing agreements.
+- **The configured OAuth provider**, when you choose external login. The provider
+  receives the data needed for authentication, not your content.
+- **Authorities**, when legally required and after a valid request review.
 
-Our hosting provider processes data on our instructions under a data processing
-agreement.
+We do not sell personal data.
+
+---
 
 ## 8. Your rights
 
-You can exercise the following at any time:
+Under the GDPR you can request:
 
-- **Access** — view everything we hold about you in the app and via a portable
-  export (JSON).
-- **Rectification** — change your username, avatar or language at any time.
-- **Deletion** — delete your account from the settings page. This removes your
-  profile, friendships and statistics. Records required for fraud prevention may be
-  retained in anonymised form.
-- **Erasure confirmation** — deleting your account requires typing your username to
-  confirm, and we send a confirmation email to the address on the account.
-- **Portability** — download all your data in a machine-readable format.
-- **Objection and restriction** — contact us and we will act accordingly.
-- **Withdraw consent** — for optional processing, via your settings or by email.
+- **Access** — a copy of your personal data.
+- **Rectification** — correct your username, bio, avatar or settings.
+- **Erasure** — delete your account and eligible content.
+- **Restriction** — limit processing while a request is reviewed.
+- **Portability** — export your profile and content in a machine-readable format.
+- **Objection** — object to processing based on legitimate interests.
+- **Complaint** — contact your supervisory authority.
 
-We respond within 30 days. Contact **privacy@pong-arena.example**.
+We respond within 30 days. Contact **privacy@transcendence.example**.
+
+---
 
 ## 9. Security
 
-- Passwords are hashed with argon2id using a unique per-user salt
-- Passwords are never logged, emailed, or included in API responses
-- Refresh tokens rotate on every use; reuse of a revoked token invalidates the session
-- Access tokens are short-lived and held in memory, not in `localStorage`
-- All traffic is served over HTTPS
-- All user input is validated on the frontend and the backend
-- Uploaded files are validated by content, not by the filename, and stored with
-  generated names outside the web root
+- Passwords are hashed and salted with argon2id or bcrypt.
+- Sessions are HTTP-only, rotated and revocable.
+- Every restricted read and write is authorised on the backend.
+- Uploads are validated by size, type and magic bytes; files are stored under
+  generated names outside the web root.
+- Access to production secrets is limited and `.env` is never committed.
+- HTTPS is enforced for all traffic.
 
-No system is perfectly secure, but these measures are the industry baseline and we
-do not knowingly introduce vulnerabilities.
+No system is perfectly secure. If you find a vulnerability, report it to
+**security@transcendence.example** rather than exploiting it.
+
+---
 
 ## 10. Children
 
-The Service is not directed at children under 16, and we do not knowingly collect
-their data.
+The Service is not intended for children under 16. If we learn that an account
+belongs to a child under 16, we will delete it.
 
-## 11. Changes to this policy
+---
 
-We will post any change here with an updated date at least 14 days before it takes
-effect. Material changes are announced in the application.
+## 11. International transfers
 
-## 12. Contact
+The Service is hosted in the European Union where possible. If a provider
+processes data outside the EEA, transfers rely on an adequacy decision or standard
+contractual clauses.
 
-Questions, requests, or complaints: **privacy@pong-arena.example**
+---
+
+## 12. Changes to this policy
+
+We may update this policy as the product changes. Material changes are announced
+in the application before they take effect, and the "last updated" date is
+revised.
+
+---
+
+## 13. Contact
+
+Questions, requests or complaints:
+**privacy@transcendence.example**

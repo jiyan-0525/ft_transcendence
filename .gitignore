@@ -6,6 +6,8 @@ node_modules/
 dist/
 build/
 *.tsbuildinfo
+packages/server/bin/
+*.exe
 
 # Secrets — never commit real values
 .env
@@ -13,16 +15,14 @@ build/
 .env.*.local
 !.env.example
 
-# Database
-prisma/*.db
-prisma/*.db-journal
-
-# User uploads (avatars)
+# User uploads
 uploads/
+data/uploads/
 !uploads/.gitkeep
 
 # Test artefacts
 coverage/
+coverage.out
 playwright-report/
 test-results/
 .nyc_output/
