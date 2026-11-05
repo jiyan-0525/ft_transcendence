@@ -13,7 +13,7 @@ packages/server/bin/
 .env
 .env.local
 .env.*.local
-!.env.example
+
 
 # User uploads
 uploads/
@@ -37,3 +37,9 @@ yarn-error.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/

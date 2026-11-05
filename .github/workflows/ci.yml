@@ -2,47 +2,59 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, feat/backend-fastapi-foundation]
   pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   backend:
-    name: Go API
+    name: FastAPI / PostgreSQL
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: transcendence_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d transcendence_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      APP_ENV: test
+      DATABASE_URL: postgresql+psycopg://postgres:ci-only-password@127.0.0.1:5432/transcendence_test
     defaults:
       run:
         working-directory: packages/server
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: packages/server/go.mod
-          cache-dependency-path: packages/server/go.sum
-      - name: Vet
-        run: go vet ./...
-      - name: Test
-        run: go test ./...
 
-  frontend:
-    name: Vue app
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: packages/web
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-python@v5
         with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: packages/web/package-lock.json
-      - name: Install
-        run: npm ci
-      - name: Lint
-        run: npm run lint
-      - name: Type-check
-        run: npm run typecheck
-      - name: Test
-        run: npm run test
-      - name: Build
-        run: npm run build
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: packages/server/requirements.txt
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt pytest
+
+      - name: Check database connection
+        run: python -m tests.test_database
+
+      - name: Apply database migrations
+        run: python -m alembic upgrade head
+
+      - name: Check migrations match models
+        run: python -m alembic check
+
+      - name: Run tests
+        run: python -m pytest -q
+
+  # Add React lint, typecheck, tests and build after packages/web is scaffolded.
