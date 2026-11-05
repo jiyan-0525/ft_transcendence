@@ -17,7 +17,7 @@ The planned experience includes:
 - Events and participation.
 - Marketplace listings and seller contact.
 
-The project is under active development. The current backend foundation includes a health endpoint, database models and migrations for users and sessions, password hashing, validation schemas and backend CI. The user-facing features listed above are planned; they are not yet available as a complete application.
+The project is under active development. The current backend foundation includes a health endpoint, database models and migrations for users and sessions, password hashing, validation schemas and backend CI. A React + TypeScript frontend scaffold and its CI job also exist. The user-facing features listed above are planned; they are not yet available as a complete application.
 
 ## Technical choices
 
@@ -33,7 +33,7 @@ The project is under active development. The current backend foundation includes
 
 ## Instructions
 
-These instructions run the current backend locally. A complete frontend and production deployment are still under development.
+These instructions run the current backend locally. The React application shell exists; application routes and production deployment are still under development.
 
 ### Prerequisites
 

@@ -7,6 +7,12 @@ so no module moves to "done" until every item in the Definition of Done
 
 **Claimed: 18 points — 6 Major + 6 Minor.**
 
+**Status key:** ✅ implemented and verifiable · 🔄 foundation exists, feature
+incomplete · ⬜ planned, no code yet.
+
+Paths marked *(planned)* do not exist yet. They name the intended location so the
+claim can be reviewed against the plan without implying the feature is done.
+
 ## Scoring boundaries
 
 The configuration lists overlapping majors. Demonstrate each in full, not one
@@ -38,19 +44,22 @@ standing in for the other:
 
 ## 1. Web — Major: frontend and backend frameworks (2 pts) · Lead A + B · 🔄 scaffold
 
-**Claim.** Vue 3 + TypeScript + Vite (frontend), Pinia + Vue Router (state and
-routing), and Go + Echo (backend).
+**Claim.** React 19 + TypeScript + Vite (frontend), React Router 7 + Zustand 5 +
+TanStack Query 5 (routing and state), and Python 3.12 + FastAPI (backend), with
+SQLAlchemy 2.0 and Alembic.
 
 **Demo script**
 
-1. Run `docker compose up --build`; open the app.
-2. Navigate Feed → Communities → Blog → Events → Marketplace.
-3. Open DevTools → Network: show REST calls to the Go API and the `/api/health`
+1. Run `make up && make migrate && make dev`; open the Vite dev server with
+   `make web-dev`.
+2. Show the React shell and the `/api/health` response through the Vite proxy.
+3. Open DevTools → Network: show the request to the FastAPI API and its JSON
    response.
-4. Open `packages/web/package.json` and `packages/server/go.mod`.
+4. Open `packages/web/package.json` and `packages/server/requirements.txt` to show
+   both frameworks and their versions.
 
-**Evidence:** `packages/web/` (Vue SPA), `packages/server/` (Echo handlers,
-middleware, domain packages).
+**Evidence:** `packages/web/` (React SPA scaffold), `packages/server/app/`
+(FastAPI app, models, schemas), `packages/server/requirements.txt`.
 
 ---
 
@@ -68,8 +77,11 @@ and presence, with persistence and reconnect recovery.
    reconnect: the missed message and notification are fetched.
 5. Open a second tab as the same user; closing one tab keeps the user online.
 
-**Evidence:** `packages/server/internal/realtime/`, `internal/chat/`,
-`internal/notifications/`, `packages/web/src/stores/`, `docs/protocol.md` §5.
+**Evidence (planned):** `packages/server/app/realtime/`, `app/routers/chat.py`,
+`app/routers/notifications.py`, `packages/web/src/lib/ws.ts`,
+`packages/web/src/stores/`, [`protocol.md`](protocol.md) §14.
+
+**Current state:** no WebSocket endpoint or client exists yet.
 
 ---
 
@@ -86,14 +98,18 @@ one-to-one direct messages.
 4. Show the message history after a reload.
 5. Remove the friend and confirm the relationship disappears for both users.
 
-**Evidence:** `internal/users/`, `internal/friends/`, `internal/chat/`,
-`packages/web/src/views/` (Profile, Friends, Messages).
+**Evidence (planned):** `packages/server/app/routers/users.py`,
+`app/routers/friends.py`, `app/routers/chat.py`,
+`packages/web/src/pages/ProfilePage.tsx`, `FriendsPage.tsx`,
+`MessagesPage.tsx`.
+
+**Current state:** no profile, friend or messaging code exists yet.
 
 ---
 
 ## 4. User — Major: standard user management (2 pts) · Lead A + B · ⬜
 
-**Claim.** Email/password registration and login with hashed passwords, editable
+**Claim.** Email/password registration and login with Argon2id hashing, editable
 profile, avatar upload with a default, friends list and live online status.
 
 **Demo script**
@@ -104,8 +120,13 @@ profile, avatar upload with a default, friends list and live online status.
 4. Send and accept a friend request; both lists update.
 5. Sign out and confirm protected routes redirect to sign-in.
 
-**Evidence:** `internal/auth/`, `internal/users/`, `internal/friends/`,
-`packages/web/src/views/ProfileView.vue`.
+**Evidence:** `packages/server/app/schemas.py` and `app/security.py` define the
+registration contract and Argon2id hashing. Routes and UI are planned:
+`packages/server/app/routers/auth.py`, `packages/web/src/pages/auth/RegisterPage.tsx`,
+`LoginPage.tsx`, `ProfilePage.tsx`.
+
+**Current state:** validation schemas and hashing exist; registration, login,
+logout, sessions and profile UI do not.
 
 ---
 
@@ -123,8 +144,10 @@ entity and its permissions are.
 4. Remove B as owner; B can no longer post to the community.
 5. Show the community's events and community-scoped content.
 
-**Evidence:** `internal/communities/`, `internal/content/`,
-`packages/web/src/views/CommunitiesView.vue`.
+**Evidence (planned):** `packages/server/app/routers/communities.py`,
+`app/services/communities.py`, `packages/web/src/pages/CommunitiesPage.tsx`.
+
+**Current state:** planned; no community model or route exists.
 
 ---
 
@@ -141,23 +164,35 @@ roles (Owner/Member), and content ownership (author/seller/organiser).
 4. As a non-member, request a restricted community post by ID; show `403`.
 5. As a different user, try to edit someone else's post; show `403`.
 
-**Evidence:** `internal/auth/` middleware, `internal/users/` role checks,
-`internal/communities/`, `internal/content/`, `docs/decisions/0003-permissions.md`.
+**Evidence:** the `users.role` check constraint in `packages/server/app/models.py`
+already restricts platform roles. Authorisation dependencies and route checks are
+planned: `app/dependencies/auth.py`, `app/routers/admin.py`,
+`docs/decisions/0003-permissions.md`.
+
+**Current state:** role column and constraint exist; no authorisation logic yet.
 
 ---
 
-## 7. Web — Minor: ORM (1 pt) · Lead B · ⬜
+## 7. Web — Minor: ORM (1 pt) · Lead B · 🔄 foundation
 
-**Claim.** GORM models, migrations and relations over PostgreSQL.
+**Claim.** SQLAlchemy 2.0 models, Alembic migrations and relationships over
+PostgreSQL.
 
 **Demo script**
 
-1. Show `packages/server/internal/storage/` models and relations.
-2. Run `make migrate`; show the applied migration.
-3. Query a user with their content, community memberships and friendships.
-4. Show the schema in `psql` with foreign keys and indexes.
+1. Show `packages/server/app/models.py` — the `User` and `AuthSession` mapped
+   classes and the foreign key.
+2. Run `make migrate`; show the applied revision in `alembic_version`.
+3. Show the generated schema in `psql` with the unique constraints, check
+   constraint and indexes.
+4. Run `python -m alembic check` to show that models and migrations agree.
 
-**Evidence:** `internal/storage/`, migration files, `docs/architecture.md` §6.
+**Evidence:** `packages/server/app/models.py`,
+`packages/server/migrations/versions/88fd3dcf3c30_create_users_and_sessions.py`,
+`packages/server/app/database.py`, [`architecture.md`](architecture.md) §6.
+
+**Current state:** two mapped tables and one migration exist. The full V1 relation
+graph is planned.
 
 ---
 
@@ -174,8 +209,11 @@ membership changes and event changes, with read state and settings.
 4. Reschedule an event; all attendees receive a notification.
 5. Mark one notification read, reload and show the unread badge decremented.
 
-**Evidence:** `internal/notifications/`, notification triggers in each domain,
-`packages/web/src/views/NotificationsView.vue`.
+**Evidence (planned):** `packages/server/app/routers/notifications.py`,
+`app/services/notifications.py`, notification triggers in each domain,
+`packages/web/src/pages/NotificationsPage.tsx`.
+
+**Current state:** planned; no notification model or route exists.
 
 ---
 
@@ -192,8 +230,11 @@ with filters, sorting, pagination and visibility checks.
 4. Sign in as a member and confirm the same item appears.
 5. Show the API response with pagination metadata.
 
-**Evidence:** `internal/search/`, domain queries, negative permission tests,
-`packages/web/src/views/SearchView.vue`.
+**Evidence (planned):** `packages/server/app/routers/search.py`,
+`app/services/search.py`, negative permission tests,
+`packages/web/src/pages/SearchPage.tsx`.
+
+**Current state:** planned; no search code exists.
 
 ---
 
@@ -212,8 +253,10 @@ access control, delete and replace.
 5. Request the same file as a non-member; show `403`.
 6. Delete the post; confirm its attachments are removed.
 
-**Evidence:** `internal/media/`, `ContentAttachment` / `MediaFile` models,
-`docs/architecture.md` §8.
+**Evidence (planned):** `packages/server/app/routers/media.py`,
+`MediaFile` / `ContentAttachment` models, [`architecture.md`](architecture.md) §8.
+
+**Current state:** planned; no upload model, route or storage configuration exists.
 
 ---
 
@@ -230,7 +273,11 @@ and icon rules, used across the product.
 3. Change a design token; show the components update together.
 4. Navigate Feed, Profile and Marketplace; show the same components in use.
 
-**Evidence:** `packages/web/src/components/`, token definitions, gallery view.
+**Evidence (planned):** `packages/web/src/components/`,
+`packages/web/src/style.css` (tokens), `pages/DesignSystemPage.tsx`.
+
+**Current state:** Tailwind is installed and the App shell uses it; no shared
+components or gallery exist yet.
 
 ---
 
@@ -248,5 +295,7 @@ account linking and a safe error path.
 5. Cancel the provider consent screen; the app returns to sign-in without an
    error state.
 
-**Evidence:** `internal/auth/` OAuth flow, `OAuthAccount` model, callback route,
-`docs/decisions/0001-stack.md`.
+**Evidence (planned):** `packages/server/app/routers/auth.py` OAuth flow,
+`OAuthAccount` model, callback route, [`decisions/0001-stack.md`](decisions/0001-stack.md).
+
+**Current state:** planned; no OAuth route, provider configuration or model exists.
