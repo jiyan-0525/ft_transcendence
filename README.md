@@ -23,7 +23,7 @@ The project is under active development. The current backend foundation includes
 
 | Layer | Technology |
 |---|---|
-| Frontend (planned) | React and TypeScript |
+| Frontend | React 19, TypeScript and Vite (foundation scaffolded) |
 | Backend | Python and FastAPI |
 | Database | PostgreSQL |
 | ORM and migrations | SQLAlchemy and Alembic |
@@ -92,6 +92,30 @@ This checks database connectivity and model/migration consistency, then runs the
 | `make dev` | Start the backend development server |
 | `make test` | Run backend checks and tests |
 | `make logs` | Follow database logs |
+
+### Frontend
+
+The React + TypeScript app lives in `packages/web` and requires Node 22.
+
+```bash
+cd packages/web
+npm install
+npm run dev
+```
+
+The Vite dev server runs on [http://localhost:5173](http://localhost:5173) and
+proxies `/api` and `/ws` to `http://127.0.0.1:8000`. Start FastAPI with
+`make dev` for live requests. While the auth routes are still being built, set
+`VITE_USE_MOCKS=true` in `packages/web/.env.local`.
+
+| Command | Purpose |
+|---|---|
+| `make web-install` | Install frontend dependencies |
+| `make web-dev` | Start the Vite dev server |
+| `make web-lint` | Lint the frontend |
+| `make web-typecheck` | Type-check the frontend |
+| `make web-test` | Run frontend tests |
+| `make web-build` | Build the frontend |
 
 ## Project documentation
 
