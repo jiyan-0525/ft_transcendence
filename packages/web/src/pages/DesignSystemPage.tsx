@@ -1,3 +1,18 @@
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  Input,
+  Spinner,
+  Textarea,
+} from '@/components/ui'
+
 type ColorToken = {
   name: string
   className: string
@@ -172,6 +187,135 @@ export default function DesignSystemPage() {
           <code className="text-sm text-white/90">
             background-image: var(--gradient-brand)
           </code>
+        </div>
+      </section>
+
+      <section aria-labelledby="components" className="mt-12">
+        <h2 id="components" className="text-2xl font-semibold text-ink">
+          Components
+        </h2>
+        <p className="mt-1 text-ink-muted">
+          Reusable primitives built on the tokens above. Pages compose these
+          instead of restyling raw HTML, so a change here reaches every screen.
+        </p>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          <Card className="p-5">
+            <h3 className="font-display text-base font-semibold text-ink">
+              Button
+            </h3>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <Button>Primary</Button>
+              <Button variant="secondary">Secondary</Button>
+              <Button variant="ghost">Ghost</Button>
+              <Button variant="danger">Danger</Button>
+              <Button loading>Loading</Button>
+              <Button disabled>Disabled</Button>
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <h3 className="font-display text-base font-semibold text-ink">
+              Badge
+            </h3>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {(
+                [
+                  'neutral',
+                  'brand',
+                  'accent',
+                  'mint',
+                  'success',
+                  'warning',
+                  'danger',
+                ] as const
+              ).map((tone) => (
+                <Badge key={tone} tone={tone}>
+                  {tone}
+                </Badge>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <h3 className="font-display text-base font-semibold text-ink">
+              Form fields
+            </h3>
+            <div className="mt-4 space-y-4">
+              <Input
+                label="Email"
+                type="email"
+                placeholder="you@example.com"
+                hint="We never share your email."
+              />
+              <Input
+                label="Password"
+                type="password"
+                error="Use at least 12 characters."
+              />
+              <Textarea
+                label="Bio"
+                placeholder="Tell people about yourself"
+              />
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <h3 className="font-display text-base font-semibold text-ink">
+              Feedback
+            </h3>
+            <div className="mt-4 space-y-3">
+              <Alert tone="info" title="Heads up">
+                Scheduled maintenance on Sunday at 02:00 UTC.
+              </Alert>
+              <Alert tone="success" title="Saved">
+                Your profile changes are live.
+              </Alert>
+              <Alert tone="warning" title="Slow connection">
+                Some images may load late.
+              </Alert>
+              <Alert tone="danger" title="Could not save">
+                Check your connection and try again.
+              </Alert>
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center gap-6 text-sm text-ink-muted">
+              <span className="inline-flex items-center gap-2">
+                <Spinner size="sm" /> Small
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <Spinner size="md" /> Medium
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <Spinner size="lg" /> Large
+              </span>
+            </div>
+          </Card>
+
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Card</CardTitle>
+              <CardDescription>
+                Header, content and footer parts share one border and shadow.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-2">
+              <p className="text-sm text-ink-muted">
+                Cards add no padding on their own, so a plain
+                <code className="mx-1 rounded-sm bg-surface-muted px-1">
+                  Card className=&quot;p-5&quot;
+                </code>
+                works for simple content. Use the compound parts when a card
+                needs a title and an action row.
+              </p>
+            </CardContent>
+            <CardFooter>
+              <Button size="sm">Primary action</Button>
+              <Button size="sm" variant="secondary">
+                Cancel
+              </Button>
+            </CardFooter>
+          </Card>
         </div>
       </section>
 

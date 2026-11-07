@@ -16,5 +16,12 @@ grid, right sidebar — but not its sample content. Every feed slot renders an
 honest empty state until the content API exists, so the UI never shows invented
 people, posts or trends.
 
+## Component gallery
+
+`/design` is the living style guide: tokens plus every reusable primitive
+(Button, Input, Textarea, Card, Badge, Alert, Spinner) in each variant and
+state. It is development-only and deliberately absent from the product
+navigation.
+
 The Canva export endpoint refused the website-type design, so the committed
 image is the 596×335 page thumbnail. The editable design remains in Canva.

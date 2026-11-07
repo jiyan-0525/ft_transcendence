@@ -1,3 +1,11 @@
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui'
+
 export default function FeedPage() {
   return (
     <div className="flex flex-col gap-6">
@@ -38,7 +46,7 @@ export default function FeedPage() {
         {/* Main column */}
         <div className="space-y-6">
           {/* Composer */}
-          <section className="rounded-lg border border-line bg-surface p-4 shadow-card sm:p-5">
+          <Card className="p-4 sm:p-5">
             <div className="flex items-start gap-3">
               <span
                 aria-hidden="true"
@@ -61,18 +69,12 @@ export default function FeedPage() {
               <span className="text-sm text-ink-muted">
                 Posting lands with the feed API.
               </span>
-              <button
-                type="button"
-                disabled
-                className="rounded-full bg-aurora px-5 py-2 text-sm font-semibold text-white opacity-60"
-              >
-                Post
-              </button>
+              <Button disabled>Post</Button>
             </div>
-          </section>
+          </Card>
 
           {/* Empty feed */}
-          <section className="rounded-lg border border-line bg-surface p-8 text-center shadow-card">
+          <Card className="p-8 text-center">
             <span
               aria-hidden="true"
               className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-surface-muted text-lg font-bold text-brand"
@@ -85,28 +87,33 @@ export default function FeedPage() {
             <p className="mt-1 text-ink-muted">
               When the content API is connected, the newest posts appear here.
             </p>
-          </section>
+          </Card>
         </div>
 
         {/* Sidebar */}
         <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
-          <section className="rounded-lg border border-line bg-surface p-5 shadow-card">
-            <h2 className="font-display text-base font-semibold text-ink">
-              Suggested for you
-            </h2>
-            <p className="mt-3 text-sm text-ink-muted">
-              Community suggestions appear here once the communities API lands.
-            </p>
-          </section>
+          <Card>
+            <CardHeader>
+              <CardTitle>Suggested for you</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-2">
+              <p className="text-sm text-ink-muted">
+                Community suggestions appear here once the communities API
+                lands.
+              </p>
+            </CardContent>
+          </Card>
 
-          <section className="rounded-lg border border-line bg-surface p-5 shadow-card">
-            <h2 className="font-display text-base font-semibold text-ink">
-              What’s trending
-            </h2>
-            <p className="mt-3 text-sm text-ink-muted">
-              Trending topics appear here once search and content APIs land.
-            </p>
-          </section>
+          <Card>
+            <CardHeader>
+              <CardTitle>What’s trending</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-2">
+              <p className="text-sm text-ink-muted">
+                Trending topics appear here once search and content APIs land.
+              </p>
+            </CardContent>
+          </Card>
         </aside>
       </div>
     </div>
