@@ -124,6 +124,15 @@ never logged, stored or returned. The registration contract already implemented 
 `UserResponse` uses snake_case: `id`, `email`, `username`, `role`, `is_active`,
 `created_at`.
 
+Status codes agreed with the frontend (details in `docs/handoff/auth-frontend.md`):
+
+- `register` → `201` with `UserResponse`. Registration does **not** sign the user
+  in and sets no cookie. Duplicate email or username → `409 CONFLICT`.
+- `login` → `200` with `UserResponse` and the session cookie. Wrong credentials →
+  `401 UNAUTHENTICATED`. The login form checks only that the password is present.
+- `logout` → `204` and the cookie is cleared.
+- `me` → `200` with `UserResponse`, or `401 UNAUTHENTICATED` without a valid session.
+
 ---
 
 ## 5. Users and friendships
