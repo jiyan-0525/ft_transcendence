@@ -13,11 +13,11 @@ export default function PlaceholderPage({
   description,
 }: PlaceholderPageProps) {
   return (
-    <section className="max-w-2xl">
-      <p className="text-sm font-medium uppercase tracking-wider text-brand">
+    <section className="max-w-2xl rounded-lg border border-line bg-surface p-6 shadow-card sm:p-8">
+      <span className="inline-flex rounded-full bg-surface-muted px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand">
         Planned
-      </p>
-      <h1 className="mt-2 text-3xl font-bold tracking-tight text-ink">
+      </span>
+      <h1 className="mt-4 font-display text-3xl font-bold tracking-tight text-ink">
         {title}
       </h1>
       <p className="mt-3 text-lg text-ink-muted">{description}</p>

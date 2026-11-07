@@ -1,4 +1,5 @@
-import { Link, Outlet } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
+import Brand from './Brand'
 
 /**
  * Layout for signed-out pages (login, register). It deliberately has no
@@ -7,14 +8,9 @@ import { Link, Outlet } from 'react-router-dom'
 export default function AuthLayout() {
   return (
     <div className="flex min-h-screen flex-col bg-canvas">
-      <header className="border-b border-line bg-surface">
+      <header className="border-b border-line bg-surface/80 backdrop-blur">
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center px-4">
-          <Link
-            to="/"
-            className="text-lg font-semibold tracking-tight text-brand"
-          >
-            Social Network
-          </Link>
+          <Brand />
         </div>
       </header>
 

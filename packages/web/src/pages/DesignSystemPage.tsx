@@ -54,13 +54,25 @@ const colorTokens: ColorToken[] = [
     name: 'brand',
     className: 'bg-brand',
     variable: '--color-brand',
-    usage: 'Primary actions',
+    usage: 'Primary actions and links',
   },
   {
     name: 'brand-strong',
     className: 'bg-brand-strong',
     variable: '--color-brand-strong',
     usage: 'Hover and pressed actions',
+  },
+  {
+    name: 'accent',
+    className: 'bg-accent',
+    variable: '--color-accent',
+    usage: 'Likes, mentions, highlights',
+  },
+  {
+    name: 'mint',
+    className: 'bg-mint',
+    variable: '--color-accent-2',
+    usage: 'Online status and success accents',
   },
   {
     name: 'success',
@@ -89,6 +101,11 @@ const radiusTokens = [
   { name: 'rounded-lg', className: 'rounded-lg', variable: '--radius-lg' },
 ]
 
+const elevationTokens = [
+  { name: 'shadow-soft', className: 'shadow-soft', variable: '--shadow-soft' },
+  { name: 'shadow-card', className: 'shadow-card', variable: '--shadow-card' },
+]
+
 const typeScale = [
   { name: 'text-xs', className: 'text-xs' },
   { name: 'text-sm', className: 'text-sm' },
@@ -106,12 +123,12 @@ export default function DesignSystemPage() {
           Design system
         </p>
         <h1 className="mt-2 text-4xl font-bold tracking-tight text-ink">
-          Tokens
+          Aurora tokens
         </h1>
         <p className="mt-4 text-lg text-ink-muted">
-          The single source of truth for color, shape and type. Each sample is
-          rendered with the real utility, so this page cannot drift from the
-          app.
+          The single source of truth for color, shape, elevation and type. Each
+          sample is rendered with the real utility, so this page cannot drift
+          from the app.
         </p>
       </header>
 
@@ -121,7 +138,7 @@ export default function DesignSystemPage() {
         </h2>
         <p className="mt-1 text-ink-muted">
           Components use these semantic names — never a palette name such as
-          <code className="mx-1 rounded-sm bg-surface-muted px-1">slate-900</code>
+          <code className="mx-1 rounded-sm bg-surface-muted px-1">purple-600</code>
           directly.
         </p>
 
@@ -129,7 +146,7 @@ export default function DesignSystemPage() {
           {colorTokens.map((token) => (
             <li
               key={token.name}
-              className="rounded-lg border border-line bg-surface p-4"
+              className="rounded-lg border border-line bg-surface p-4 shadow-card"
             >
               <div
                 className={`h-12 w-full rounded border border-line ${token.className}`}
@@ -144,6 +161,20 @@ export default function DesignSystemPage() {
         </ul>
       </section>
 
+      <section aria-labelledby="gradient" className="mt-12">
+        <h2 id="gradient" className="text-2xl font-semibold text-ink">
+          Gradient
+        </h2>
+        <p className="mt-1 text-ink-muted">
+          Reserved for the wordmark, hero panels and primary calls to action.
+        </p>
+        <div className="mt-6 flex min-h-24 items-end rounded-lg bg-aurora p-5 shadow-soft">
+          <code className="text-sm text-white/90">
+            background-image: var(--gradient-brand)
+          </code>
+        </div>
+      </section>
+
       <section aria-labelledby="radius" className="mt-12">
         <h2 id="radius" className="text-2xl font-semibold text-ink">
           Radius
@@ -156,10 +187,36 @@ export default function DesignSystemPage() {
           {radiusTokens.map((token) => (
             <li
               key={token.name}
-              className="rounded-lg border border-line bg-surface p-4"
+              className="rounded-lg border border-line bg-surface p-4 shadow-card"
             >
               <div
                 className={`h-16 w-full border border-line bg-surface-muted ${token.className}`}
+              />
+              <p className="mt-3 font-medium text-ink">{token.name}</p>
+              <code className="text-xs text-ink-muted">
+                var({token.variable})
+              </code>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section aria-labelledby="elevation" className="mt-12">
+        <h2 id="elevation" className="text-2xl font-semibold text-ink">
+          Elevation
+        </h2>
+        <p className="mt-1 text-ink-muted">
+          Soft violet glow for interactive surfaces, neutral shadow for cards.
+        </p>
+
+        <ul className="mt-6 grid gap-4 sm:grid-cols-2">
+          {elevationTokens.map((token) => (
+            <li
+              key={token.name}
+              className="rounded-lg border border-line bg-surface p-4"
+            >
+              <div
+                className={`h-24 w-full rounded bg-surface-muted ${token.className}`}
               />
               <p className="mt-3 font-medium text-ink">{token.name}</p>
               <code className="text-xs text-ink-muted">
@@ -175,7 +232,7 @@ export default function DesignSystemPage() {
           Type scale
         </h2>
         <p className="mt-1 text-ink-muted">
-          Headings, body copy and captions in one ladder.
+          Plus Jakarta Sans for headings, Inter for body copy.
         </p>
 
         <ul className="mt-6 divide-y divide-line">

@@ -13,7 +13,7 @@ describe('routes', () => {
     renderAt('/')
 
     expect(
-      screen.getByRole('heading', { name: /home feed/i }),
+      screen.getByRole('heading', { name: /your community, in one place/i }),
     ).toBeInTheDocument()
   })
 
@@ -29,7 +29,7 @@ describe('routes', () => {
     renderAt('/design')
 
     expect(
-      screen.getByRole('heading', { name: /^tokens$/i }),
+      screen.getByRole('heading', { name: /aurora tokens/i }),
     ).toBeInTheDocument()
   })
 

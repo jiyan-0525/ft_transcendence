@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import Brand from './Brand'
 
 type NavItem = {
   to: string
@@ -29,20 +30,20 @@ const accountLinks: NavItem[] = [
   { to: '/admin', label: 'Admin' },
 ]
 
-const baseLink = 'rounded-sm px-3 py-2 text-sm font-medium transition-colors'
+const baseLink = 'rounded-full px-3 py-2 text-sm font-medium transition-colors'
 
 function navLinkClass({ isActive }: { isActive: boolean }) {
   return isActive
-    ? `${baseLink} bg-surface-muted text-brand`
-    : `${baseLink} text-ink-muted hover:text-ink`
+    ? `${baseLink} bg-brand text-white shadow-soft`
+    : `${baseLink} text-ink-muted hover:bg-surface-muted hover:text-ink`
 }
 
 function mobileNavLinkClass({ isActive }: { isActive: boolean }) {
   const base =
-    'block rounded-sm px-3 py-2 text-base font-medium transition-colors'
+    'block rounded-md px-3 py-2 text-base font-medium transition-colors'
   return isActive
-    ? `${base} bg-surface-muted text-brand`
-    : `${base} text-ink-muted hover:text-ink`
+    ? `${base} bg-brand text-white`
+    : `${base} text-ink-muted hover:bg-surface-muted hover:text-ink`
 }
 
 /**
@@ -85,15 +86,9 @@ export default function AppShell() {
         Skip to content
       </a>
 
-      <header className="border-b border-line bg-surface">
+      <header className="sticky top-0 z-20 border-b border-line bg-surface/85 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:h-16 sm:py-0">
-          <NavLink
-            to="/"
-            end
-            className="text-lg font-semibold tracking-tight text-brand"
-          >
-            Social Network
-          </NavLink>
+          <Brand />
 
           {/* Desktop account links */}
           <nav aria-label="Account" className="hidden sm:block">
@@ -112,7 +107,7 @@ export default function AppShell() {
           <button
             ref={menuButtonRef}
             type="button"
-            className="inline-flex items-center rounded-sm border border-line px-3 py-2 text-sm font-medium text-ink-muted transition-colors hover:text-ink sm:hidden"
+            className="inline-flex items-center rounded-full border border-line px-4 py-2 text-sm font-medium text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink sm:hidden"
             aria-expanded={menuOpen}
             aria-controls="primary-menu"
             onClick={() => setMenuOpen((open) => !open)}
@@ -126,7 +121,7 @@ export default function AppShell() {
 
         {/* Desktop channel navigation */}
         <nav aria-label="Primary" className="hidden border-t border-line sm:block">
-          <ul className="mx-auto flex w-full max-w-6xl items-center gap-1 overflow-x-auto px-4">
+          <ul className="mx-auto flex w-full max-w-6xl items-center gap-1 overflow-x-auto px-4 py-1.5">
             {channels.map((item) => (
               <li key={item.to}>
                 <NavLink to={item.to} end={item.end} className={navLinkClass}>
@@ -140,7 +135,7 @@ export default function AppShell() {
         {/* Mobile panel */}
         <div
           id="primary-menu"
-          className={menuOpen ? 'block sm:hidden' : 'hidden'}
+          className={menuOpen ? 'block bg-surface sm:hidden' : 'hidden'}
         >
           <nav aria-label="Primary mobile">
             <ul className="space-y-1 border-t border-line px-4 py-3">

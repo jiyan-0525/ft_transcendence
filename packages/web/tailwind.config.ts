@@ -30,6 +30,8 @@ export default {
           DEFAULT: 'rgb(var(--color-brand) / <alpha-value>)',
           strong: 'rgb(var(--color-brand-strong) / <alpha-value>)',
         },
+        accent: 'rgb(var(--color-accent) / <alpha-value>)',
+        mint: 'rgb(var(--color-accent-2) / <alpha-value>)',
         success: 'rgb(var(--color-success) / <alpha-value>)',
         warning: 'rgb(var(--color-warning) / <alpha-value>)',
         danger: 'rgb(var(--color-danger) / <alpha-value>)',
@@ -40,8 +42,16 @@ export default {
         md: 'var(--radius-md)',
         lg: 'var(--radius-lg)',
       },
+      boxShadow: {
+        soft: 'var(--shadow-soft)',
+        card: 'var(--shadow-card)',
+      },
+      backgroundImage: {
+        aurora: 'var(--gradient-brand)',
+      },
       fontFamily: {
         sans: [
+          'Inter',
           'ui-sans-serif',
           'system-ui',
           '-apple-system',
@@ -49,6 +59,13 @@ export default {
           'Roboto',
           'Helvetica Neue',
           'Arial',
+          'sans-serif',
+        ],
+        display: [
+          '"Plus Jakarta Sans"',
+          'Inter',
+          'ui-sans-serif',
+          'system-ui',
           'sans-serif',
         ],
       },
