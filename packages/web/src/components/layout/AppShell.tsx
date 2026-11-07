@@ -6,6 +6,8 @@ type NavItem = {
   to: string
   label: string
   end?: boolean
+  /** Hidden in the desktop header below `xl`, still present in the mobile menu. */
+  desktopOnly?: boolean
 }
 
 /**
@@ -25,9 +27,15 @@ const channels: NavItem[] = [
 ]
 
 const accountLinks: NavItem[] = [
-  { to: '/profile/me', label: 'Profile' },
-  { to: '/settings', label: 'Settings' },
-  { to: '/admin', label: 'Admin' },
+  // Temporary entry points: there is no session store yet, so signed-out
+  // pages must be reachable from the product header. Once auth state exists
+  // these move to a signed-out header and the account links below move into
+  // the avatar menu.
+  { to: '/login', label: 'Log in' },
+  { to: '/register', label: 'Create account' },
+  { to: '/profile/me', label: 'Profile', desktopOnly: true },
+  { to: '/settings', label: 'Settings', desktopOnly: true },
+  { to: '/admin', label: 'Admin', desktopOnly: true },
 ]
 
 const baseLink = 'rounded-full px-3 py-2 text-sm font-medium transition-colors'
@@ -38,12 +46,21 @@ function navLinkClass({ isActive }: { isActive: boolean }) {
     : `${baseLink} text-ink-muted hover:bg-surface-muted hover:text-ink`
 }
 
+/** The signup entry point is the only call to action in the header. */
+function ctaLinkClass() {
+  return `${baseLink} bg-aurora text-white shadow-soft hover:opacity-90`
+}
+
 function mobileNavLinkClass({ isActive }: { isActive: boolean }) {
   const base =
     'block rounded-md px-3 py-2 text-base font-medium transition-colors'
   return isActive
     ? `${base} bg-brand text-white`
     : `${base} text-ink-muted hover:bg-surface-muted hover:text-ink`
+}
+
+function mobileCtaLinkClass() {
+  return 'block rounded-md bg-aurora px-3 py-2 text-base font-semibold text-white'
 }
 
 /**
@@ -94,8 +111,17 @@ export default function AppShell() {
           <nav aria-label="Account" className="hidden sm:block">
             <ul className="flex items-center gap-1">
               {accountLinks.map((item) => (
-                <li key={item.to}>
-                  <NavLink to={item.to} end={item.end} className={navLinkClass}>
+                <li
+                  key={item.to}
+                  className={item.desktopOnly ? 'hidden xl:block' : undefined}
+                >
+                  <NavLink
+                    to={item.to}
+                    end={item.end}
+                    className={
+                      item.to === '/register' ? ctaLinkClass : navLinkClass
+                    }
+                  >
                     {item.label}
                   </NavLink>
                 </li>
@@ -161,7 +187,11 @@ export default function AppShell() {
                   <NavLink
                     to={item.to}
                     end={item.end}
-                    className={mobileNavLinkClass}
+                    className={
+                      item.to === '/register'
+                        ? mobileCtaLinkClass
+                        : mobileNavLinkClass
+                    }
                     onClick={() => setMenuOpen(false)}
                   >
                     {item.label}

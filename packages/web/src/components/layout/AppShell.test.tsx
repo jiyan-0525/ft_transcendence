@@ -9,6 +9,22 @@ function renderApp(path = '/') {
   render(<RouterProvider router={router} />)
 }
 
+describe('AppShell auth entry points', () => {
+  it('links to login and registration from the header', () => {
+    renderApp()
+
+    const loginHrefs = screen
+      .getAllByRole('link', { name: 'Log in' })
+      .map((link) => link.getAttribute('href'))
+    const registerHrefs = screen
+      .getAllByRole('link', { name: 'Create account' })
+      .map((link) => link.getAttribute('href'))
+
+    expect(loginHrefs).toContain('/login')
+    expect(registerHrefs).toContain('/register')
+  })
+})
+
 describe('AppShell mobile navigation', () => {
   it('opens the menu with the toggle button', async () => {
     const user = userEvent.setup()
