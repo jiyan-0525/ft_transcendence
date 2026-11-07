@@ -11,5 +11,10 @@ Generated on 2026-11-07 with the Canva MCP server. The live implementation is
 `packages/web/src/pages/FeedPage.tsx`; the tokens are in
 `packages/web/src/style.css` and `packages/web/tailwind.config.ts`.
 
+The live page keeps the mockup's **layout** — wave hero, composer, two-column
+grid, right sidebar — but not its sample content. Every feed slot renders an
+honest empty state until the content API exists, so the UI never shows invented
+people, posts or trends.
+
 The Canva export endpoint refused the website-type design, so the committed
 image is the 596×335 page thumbnail. The editable design remains in Canva.
