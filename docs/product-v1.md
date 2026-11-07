@@ -17,7 +17,7 @@ Related documents: [User flows](user-flows.md) · [Data model](data-model.md)
 - Argon2id password hashing, registration input and user response schemas.
 - Database connection and migration verified; three password-security tests passed; backend CI passed.
 
-Registration, login, logout, current-user lookup and cookie/session handling still need implementation. The React + TypeScript frontend and business features are planned; this baseline does not verify their completion.
+Registration, login, logout, current-user lookup and cookie/session handling still need implementation. A React 19 + TypeScript + Vite scaffold exists in `packages/web`, but the application routes, design system and user-facing features are planned; this baseline does not verify their completion.
 
 ## V1 scope
 

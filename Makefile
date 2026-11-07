@@ -2,10 +2,12 @@
 PYTHON ?= python3
 PY := $(CURDIR)/.venv/bin/python
 SERVER := packages/server
+WEB := packages/web
 COMPOSE := docker compose -p transcendence-db -f compose.db.yml
 PORT ?= 8000
 
-.PHONY: help setup up down db migrate test logs dev
+.PHONY: help setup up down db migrate test logs dev \
+	web-install web-dev web-lint web-typecheck web-test web-build
 
 help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*## "} /^[a-z-]+:.*## / {printf "  %-12s %s\n", $$1, $$2}' Makefile
@@ -44,3 +46,21 @@ logs: ## Follow PostgreSQL logs
 
 dev: ## Run FastAPI locally; Ctrl-C stops it (DB must be ready)
 	@cd $(SERVER) && "$(PY)" -m uvicorn app.main:app --reload --host 127.0.0.1 --port $(PORT)
+
+web-install: ## Install frontend dependencies
+	@cd $(WEB) && npm install
+
+web-dev: ## Run the Vite dev server on :5173
+	@cd $(WEB) && npm run dev
+
+web-lint: ## Lint the frontend
+	@cd $(WEB) && npm run lint
+
+web-typecheck: ## Type-check the frontend
+	@cd $(WEB) && npm run typecheck
+
+web-test: ## Run frontend tests
+	@cd $(WEB) && npm run test
+
+web-build: ## Build the frontend
+	@cd $(WEB) && npm run build

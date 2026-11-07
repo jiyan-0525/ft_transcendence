@@ -3,7 +3,7 @@
 **Project:** Community & Content Platform
 **Track:** 42 Heilbronn — Common Core, final project
 **Team size:** 5
-**Status:** Week 1 — shared foundation
+**Status:** Week 1 — backend foundation and React scaffold exist; product features planned
 **Target:** 18 module points (6 Major + 6 Minor); 14 required
 
 ---
@@ -47,30 +47,32 @@ capabilities that cut across every domain rather than separate products.
 
 | Layer | Choice | Rationale |
 |---|---|---|
-| Frontend | Vue 3 + TypeScript + Vite | The scaffold already exists; typed SPA with fast HMR |
-| Routing / state | Vue Router + Pinia | Explicit server-state and session stores; no duplicated domain rules |
-| Styling | Tailwind CSS + custom component library | Responsive UI and the 10+ reusable components required by the design-system module |
-| Backend | Go + Echo | Small, explicit HTTP layer; strong standard library; easy single-binary deployment |
+| Frontend | React 19 + TypeScript + Vite | Typed SPA with fast HMR; the scaffold exists |
+| Routing / state | React Router 7 + Zustand 5 + TanStack Query 5 | Explicit routing, local session/UI state and cached server state |
+| Styling | Tailwind CSS 3.4 + custom component library | Responsive UI and the 10+ reusable components required by the design-system module |
+| Backend | Python 3.12 + FastAPI (Uvicorn) | Typed request/response models, dependency injection, automatic API docs and a small explicit HTTP layer |
 | Database | PostgreSQL 16 | Real relations, constraints and transactions for capacity, permissions and notifications |
-| Data access | GORM | Migrations and typed relations; claims the ORM minor module |
-| Realtime | Native JSON WebSocket | One protocol for chat, notifications and presence; no polling fallback to maintain |
-| Auth | Email/password + one OAuth provider, argon2id or bcrypt, server-issued sessions/JWT | Requirement: secure password storage and external login |
+| Data access | SQLAlchemy 2.0 + Alembic | Typed models, relationships and versioned migrations; claims the ORM minor module |
+| Realtime | Native JSON WebSocket (FastAPI/Starlette) | One protocol for chat, notifications and presence; no polling fallback to maintain |
+| Auth | Email/password + one OAuth provider, Argon2id, server-issued sessions | Requirement: secure password storage and external login |
 | File storage | Docker persistent volume + file metadata in PostgreSQL | Requirement: durable uploads with validation and access control |
-| Reverse proxy | Caddy, automatic HTTPS | "HTTPS everywhere" with minimal configuration |
-| Packaging | Docker Compose, multi-stage builds | Requirement: single-command deployment |
-| Tests | Go `testing`, Vitest, Playwright smoke tests | Domain tests, unit tests and an end-to-end console check |
+| Reverse proxy | Caddy, automatic HTTPS (planned) | "HTTPS everywhere" with minimal configuration |
+| Packaging | Docker Compose, multi-stage builds (planned) | Requirement: single-command deployment |
+| Tests | pytest, Vitest + Testing Library, Playwright smoke tests | API/domain tests, unit tests and an end-to-end console check |
 
-### Why Go + Echo
+### Why FastAPI
 
-The backend is one deployable **modular monolith**. Echo keeps routing and
-middleware explicit, goroutines make the WebSocket hub straightforward, and the
-result compiles to a small image that starts quickly inside Compose. Domain
-packages give the separation a larger framework would provide without the
-reflection and dependency-injection overhead.
+The backend is one deployable **modular monolith**. FastAPI gives typed Pydantic
+requests and responses, dependency injection for the current user and database
+session, and automatic OpenAPI documentation. SQLAlchemy and Alembic keep the
+schema explicit and reviewable. Python's async support covers the WebSocket hub,
+and business rules stay in services rather than route handlers.
 
-### Why Vue 3
+### Why React 19
 
-The current repository scaffold uses Vue 3, TypeScript, Vite and Pinia. The
+The team standardised on React in PR #15 after the initial scaffold. React 19 with
+TypeScript gives a typed SPA, React Router handles routing and guards, Zustand
+keeps session/UI state small, and TanStack Query owns cached server state. The
 product design is unchanged by that choice: the framework module requires a
 frontend framework and a backend framework, not a specific brand.
 
@@ -86,47 +88,48 @@ the transactions that make "one seat left, two simultaneous RSVPs" correct.
 
 ```
 ft_transcendence/
-├── docker-compose.yml           # postgres, server, web, caddy (Week 1)
-├── .env.example                 # committed template; real .env git-ignored
-├── Makefile                     # up / down / logs / test / lint
-├── README.md                    # graded entry point: roles, modules, demo
-├── PLAN.md                      # this file
-├── Project design.pdf           # product design: pages, scope, data model
-├── Social Network.pdf           # 18-point module config, scoring boundaries, demo
+├── compose.db.yml                # PostgreSQL for local development
+├── .env.example                  # committed template; real .env git-ignored
+├── Makefile                      # setup / up / migrate / dev / test / web-*
+├── README.md                     # graded entry point: roles, modules, demo
+├── PLAN.md                       # this file
+├── Social_Network.pdf            # 18-point module config, scoring boundaries, demo
 ├── docs/
-│   ├── architecture.md          # diagrams, domain boundaries, WebSocket protocol
-│   ├── module-claims.md         # per-module evidence + demo script
-│   ├── decisions/               # ADRs: shared Content layer, auth, sync model
-│   └── legal/                   # Privacy Policy, Terms of Service
-└── packages/
-    ├── server/                  # Go + Echo
-    │   ├── cmd/server/          # entry point
-    │   └── internal/
-    │       ├── auth/
-    │       ├── users/
-    │       ├── friends/
-    │       ├── communities/
-    │       ├── content/         # posts, articles, comments, reactions
-    │       ├── events/
-    │       ├── marketplace/
-    │       ├── chat/
-    │       ├── notifications/
-    │       ├── media/
-    │       ├── search/
-    │       ├── realtime/        # WebSocket hub, presence, reconnect
-    │       ├── storage/         # PostgreSQL, migrations, file metadata
-    │       └── handler/         # HTTP handlers and middleware
-    └── web/                     # Vue 3 + TypeScript + Vite
-        └── src/
-            ├── views/           # Feed, Profile, Communities, Blog, Events, ...
-            ├── components/      # design system (10+ reusable)
-            ├── stores/          # Pinia stores
-            ├── lib/             # API client, WebSocket client
-            └── router/
+│   ├── architecture.md           # diagrams, module boundaries, WebSocket protocol
+│   ├── data-model.md             # implemented schema and proposed V1 entities
+│   ├── protocol.md               # REST/WebSocket contract
+│   ├── module-claims.md          # per-module evidence + demo script
+│   ├── decisions/                # ADRs: stack, shared Content, permissions, realtime
+│   └── legal/                    # Privacy Policy, Terms of Service
+├── packages/
+│   ├── server/                   # Python 3.12 + FastAPI
+│   │   ├── alembic.ini
+│   │   ├── requirements.txt
+│   │   ├── app/
+│   │   │   ├── main.py           # FastAPI app and /api/health (exists)
+│   │   │   ├── config.py         # pydantic-settings (exists)
+│   │   │   ├── database.py       # engine, SessionLocal, get_db (exists)
+│   │   │   ├── models.py         # User, AuthSession (exists)
+│   │   │   ├── schemas.py        # request/response schemas (exists)
+│   │   │   ├── security.py       # Argon2id (exists)
+│   │   │   ├── routers/          # planned: auth, users, friends, content, ...
+│   │   │   ├── services/         # planned: transactions and domain rules
+│   │   │   └── dependencies/     # planned: current user and role checks
+│   │   ├── migrations/           # Alembic revisions
+│   │   └── tests/                # pytest: database, security, routes
+│   └── web/                      # React 19 + TypeScript + Vite
+│       └── src/
+│           ├── main.tsx          # React root (exists)
+│           ├── App.tsx           # bootstrap shell (exists)
+│           ├── pages/            # planned: Feed, Profile, Communities, Blog, ...
+│           ├── components/       # planned: design system (10+ reusable)
+│           ├── stores/           # planned: Zustand auth and UI stores
+│           ├── lib/              # planned: API client, WebSocket client
+│           └── router/           # planned: React Router routes and guards
 ```
 
-The configuration, documentation and UI shell now follow this layout. The domain
-packages, Docker Compose stack and Caddy configuration are Week 1 deliverables.
+The backend foundation and the React shell follow this layout. Domain routers,
+services, the full Compose stack and Caddy configuration are Week 1 deliverables.
 
 ---
 
@@ -136,16 +139,17 @@ The backend is a **modular monolith**: one deployable service, one database, and
 strict package boundaries per business domain.
 
 ```
-Browser (Vue SPA)
-   │  HTTPS / REST                 WSS
+Browser (React SPA)
+   │  HTTPS / REST                 WSS (planned)
    ▼                                 ▼
-Caddy ──▶ Go + Echo API ──▶ PostgreSQL   WebSocket hub
-              │                              │
-              ├── auth / users / friends     ├── chat
-              ├── communities / content      ├── notifications
-              ├── events / marketplace       └── presence
-              ├── notifications / media
-              └── search
+Caddy (planned) ──▶ FastAPI / Uvicorn ──▶ PostgreSQL
+                         │
+                         ├── auth / users / friends
+                         ├── communities / content
+                         ├── events / marketplace
+                         ├── notifications / media
+                         ├── search
+                         └── WebSocket hub (planned)
 ```
 
 ### 4.1 Why a monolith
@@ -228,56 +232,29 @@ history and file downloads reuse the same checks as normal reads.
 
 ## 5. Data model
 
-| Domain | Core entities |
-|---|---|
-| Users and relationships | `User`, `Session`, `OAuthAccount`, `FriendRequest`, `Friendship` |
-| Communities | `Community`, `CommunityMember` |
-| Content | `Content`, `Post`, `Article`, `Comment`, `Reaction` |
-| Events | `Event`, `EventParticipant` |
-| Marketplace | `Listing` |
-| Chat | `Conversation`, `ConversationMember`, `Message` |
-| Files | `MediaFile`, `ContentAttachment` |
-| Notifications | `Notification` |
+The full schema, constraints and migration workflow live in
+[`docs/data-model.md`](docs/data-model.md). Summary:
 
-Key fields and rules:
+| Domain | Core entities | Status |
+|---|---|---|
+| Users and relationships | `User`, `AuthSession`, `OAuthAccount`, `FriendRequest`, `Friendship` | `User` + `AuthSession` implemented; rest planned |
+| Communities | `Community`, `CommunityMember` | planned |
+| Content | `Content`, `Post`, `Article`, `Comment`, `Reaction` | planned |
+| Events | `Event`, `EventParticipant` | planned |
+| Marketplace | `Listing` | planned |
+| Chat | `Conversation`, `ConversationMember`, `Message` | planned |
+| Files | `MediaFile`, `ContentAttachment` | planned |
+| Notifications | `Notification` | planned |
 
-```
-User              id, email(unique), passwordHash?, username(unique), bio,
-                  avatarMediaId?, platformRole(USER|MODERATOR|ADMIN),
-                  oauthProvider?, oauthSubject?, createdAt
-Session           id, userId→User, tokenHash, expiresAt, revokedAt?
-FriendRequest     id, requesterId→User, addresseeId→User,
-                  status(PENDING|ACCEPTED|REJECTED), createdAt
-Friendship        id, userAId→User, userBId→User, createdAt
-Community         id, ownerId→User, name, slug(unique), description, visibility
-CommunityMember   communityId→Community, userId→User, role(OWNER|MEMBER),
-                  joinedAt
-Content           id, authorId→User, communityId?→Community,
-                  type(POST|ARTICLE|EVENT|LISTING),
-                  visibility(PUBLIC|FRIENDS|COMMUNITY|PRIVATE),
-                  publishedAt?, deletedAt?
-Post              contentId→Content, body
-Article           contentId→Content, title, summary, bodyMarkdown, coverMediaId?
-Comment           id, contentId→Content, authorId→User, body, createdAt
-Reaction          id, contentId→Content, userId→User, kind, unique(content,user,kind)
-Event             contentId→Content, title, description, location, startsAt,
-                  endsAt, capacity?, status(UPCOMING|CANCELLED|COMPLETED)
-EventParticipant  eventId→Event, userId→User, status(GOING|CANCELLED),
-                  unique(event,user)
-Listing           contentId→Content, title, description, priceCents, currency,
-                  category, condition, status(AVAILABLE|RESERVED|SOLD)
-Conversation      id, createdAt
-ConversationMember conversationId→Conversation, userId→User, lastReadAt?
-Message           id, conversationId→Conversation, senderId→User, body, createdAt
-MediaFile         id, ownerId→User, storageKey, mimeType, sizeBytes, createdAt
-ContentAttachment contentId→Content, mediaId→MediaFile, role(AVATAR|COVER|GALLERY|ATTACHMENT)
-Notification      id, recipientId→User, type, payloadJson, readAt?, createdAt
-```
+Implemented tables keep snake_case column names. The registration contract is
+already enforced in `packages/server/app/schemas.py`: password 15–128 characters,
+username 3–50 matching `^[A-Za-z0-9_]+$`, email normalised to lowercase. The
+React client maps backend snake_case DTOs to camelCase domain models.
 
 Indexes cover every foreign key and every column used in a filter or sort:
-`Content.publishedAt`, `Content.visibility`, `Listing.status`, `Listing.category`,
-`Listing.priceCents`, `Event.startsAt`, `Notification.recipientId + readAt`,
-`Message.conversationId + createdAt`.
+`content.published_at`, `content.visibility`, `listing.status`,
+`listing.category`, `listing.price_cents`, `event.starts_at`,
+`notification.recipient_id + read_at`, `message.conversation_id + created_at`.
 
 ---
 
@@ -399,12 +376,14 @@ kickoff date is fixed.
 ### Week 1 — Shared foundation (A, B, C)
 
 - Agree stack, repository layout, database schema and API contracts.
-- `docker-compose.yml`: PostgreSQL, API, web, Caddy (dev and prod profiles).
-- First migrations and seed script; `.env.example`; `.env` verified ignored.
-- Auth: registration, login, logout, session handling, secure password hashing.
-- Page shell, routing, shared components, design tokens.
-- Migrate README, PLAN, `.env.example` and the Makefile away from the previous
-  project direction.
+- PostgreSQL in `compose.db.yml`; full Compose stack with API, web and Caddy
+  (dev and prod profiles) is the remaining foundation work.
+- First migration exists; add seed script; `.env.example`; `.env` verified ignored.
+- Auth foundation: registration schemas, Argon2id hashing and session model exist;
+  registration, login, logout and session handling still need implementation.
+- React page shell, routing, shared components and design tokens.
+- README, PLAN, architecture, protocol, module claims and the data-model document
+  aligned with React + FastAPI.
 
 *Exit criteria: everyone can start the environment; two users can register and
 log in through the UI; data persists across a restart; CI is green.*
@@ -491,8 +470,8 @@ project and their own contribution.*
 
 | Requirement | How it is met | Verified in |
 |---|---|---|
-| Web app: frontend + backend + database | Vue 3 SPA · Go + Echo API · PostgreSQL | Week 1 |
-| Frontend and backend frameworks | Vue 3 + Vite; Go + Echo | Week 1 |
+| Web app: frontend + backend + database | React 19 SPA · FastAPI API · PostgreSQL | Week 1 |
+| Frontend and backend frameworks | React 19 + Vite; Python 3.12 + FastAPI | Week 1 |
 | Git with clear commits from all members | Conventional Commits, one-review PR rule, protected `main` | §7.3 |
 | Single-command containerised deployment | `docker compose up --build` | Week 1 |
 | Latest stable Chrome | Vite build targets modern browsers | Week 6 |
@@ -507,7 +486,7 @@ project and their own contribution.*
 | Frontend **and** backend input validation | Shared validation rules and boundary checks | Weeks 1–5 |
 | HTTPS everywhere | Caddy with automatic certificates and HTTP→HTTPS redirect | Week 1 |
 | At least 14 module points | 18 committed points, §6 | Weeks 1–5 |
-| ORM | GORM models, migrations and relations | Week 1 |
+| ORM | SQLAlchemy 2.0 models, Alembic migrations and relations | Week 1 |
 | Real-time features | WebSocket chat, notifications, presence, reconnect | Weeks 2–3 |
 | File upload management | Validation, preview, progress, access control, delete/replace | Week 3 |
 | Advanced search | Keywords, filters, sorting, pagination, visibility checks | Week 5 |

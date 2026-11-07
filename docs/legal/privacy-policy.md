@@ -168,7 +168,7 @@ We respond within 30 days. Contact **privacy@transcendence.example**.
 
 ## 9. Security
 
-- Passwords are hashed and salted with argon2id or bcrypt.
+- Passwords are hashed and salted with Argon2id.
 - Sessions are HTTP-only, rotated and revocable.
 - Every restricted read and write is authorised on the backend.
 - Uploads are validated by size, type and magic bytes; files are stored under

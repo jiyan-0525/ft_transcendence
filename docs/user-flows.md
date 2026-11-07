@@ -4,7 +4,7 @@ Team design baseline · 5 November 2026
 
 Scope and decision IDs: [Product V1](product-v1.md) · Schema: [Data model](data-model.md)
 
-These flows describe the target behaviour. Only the backend foundation is currently verified; authentication routes and business flows still need implementation. Open decisions are tracked in Product V1.
+These flows describe the target behaviour. The backend foundation and the React scaffold are verified; authentication routes, the application UI and business flows still need implementation. Open decisions are tracked in Product V1.
 
 ## 1. Accounts and sessions
 
