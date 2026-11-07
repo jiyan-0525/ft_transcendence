@@ -9,6 +9,22 @@ function renderAt(path: string) {
 }
 
 describe('routes', () => {
+  it('renders the home feed at /', () => {
+    renderAt('/')
+
+    expect(
+      screen.getByRole('heading', { name: /home feed/i }),
+    ).toBeInTheDocument()
+  })
+
+  it('renders the login page at /login', () => {
+    renderAt('/login')
+
+    expect(
+      screen.getByRole('heading', { name: /^log in$/i }),
+    ).toBeInTheDocument()
+  })
+
   it('renders the design system page at /design', () => {
     renderAt('/design')
 

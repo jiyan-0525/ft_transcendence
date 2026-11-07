@@ -8,13 +8,25 @@ type NavItem = {
 }
 
 /**
- * Primary navigation. `end: true` on "/" stops the Home link from staying
- * highlighted on every route (React Router matches "/" as a prefix otherwise).
+ * Primary channels from Social_Network.pdf §"Pages to build".
+ * `/design` is a development page for the design-system module and is kept
+ * out of the product navigation.
  */
-const navigation: NavItem[] = [
-  { to: '/', label: 'Home', end: true },
-  { to: '/design', label: 'Design' },
+const channels: NavItem[] = [
+  { to: '/', label: 'Feed', end: true },
+  { to: '/communities', label: 'Communities' },
+  { to: '/blog', label: 'Blog' },
+  { to: '/events', label: 'Events' },
+  { to: '/marketplace', label: 'Marketplace' },
+  { to: '/messages', label: 'Messages' },
+  { to: '/notifications', label: 'Notifications' },
+  { to: '/search', label: 'Search' },
+]
+
+const accountLinks: NavItem[] = [
+  { to: '/profile/me', label: 'Profile' },
   { to: '/settings', label: 'Settings' },
+  { to: '/admin', label: 'Admin' },
 ]
 
 const baseLink = 'rounded-sm px-3 py-2 text-sm font-medium transition-colors'
@@ -34,10 +46,9 @@ function mobileNavLinkClass({ isActive }: { isActive: boolean }) {
 }
 
 /**
- * AppShell — the outer frame every page renders inside.
- *
- * It is a *layout route*: React Router renders it once and swaps only the
- * <Outlet /> content as the user navigates, so the header/footer stay mounted.
+ * AppShell — the outer frame for the authenticated product area.
+ * It is a layout route: React Router renders it once and swaps only the
+ * <Outlet /> content, so the header and footer stay mounted.
  */
 export default function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -75,19 +86,19 @@ export default function AppShell() {
       </a>
 
       <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-2 px-4 py-3 sm:h-16 sm:py-0">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:h-16 sm:py-0">
           <NavLink
             to="/"
             end
             className="text-lg font-semibold tracking-tight text-brand"
           >
-            Community
+            Social Network
           </NavLink>
 
-          {/* Desktop navigation */}
-          <nav aria-label="Primary" className="hidden sm:block">
+          {/* Desktop account links */}
+          <nav aria-label="Account" className="hidden sm:block">
             <ul className="flex items-center gap-1">
-              {navigation.map((item) => (
+              {accountLinks.map((item) => (
                 <li key={item.to}>
                   <NavLink to={item.to} end={item.end} className={navLinkClass}>
                     {item.label}
@@ -113,11 +124,44 @@ export default function AppShell() {
           </button>
         </div>
 
+        {/* Desktop channel navigation */}
+        <nav aria-label="Primary" className="hidden border-t border-line sm:block">
+          <ul className="mx-auto flex w-full max-w-6xl items-center gap-1 overflow-x-auto px-4">
+            {channels.map((item) => (
+              <li key={item.to}>
+                <NavLink to={item.to} end={item.end} className={navLinkClass}>
+                  {item.label}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
         {/* Mobile panel */}
-        <div id="primary-menu" className={menuOpen ? 'block sm:hidden' : 'hidden'}>
+        <div
+          id="primary-menu"
+          className={menuOpen ? 'block sm:hidden' : 'hidden'}
+        >
           <nav aria-label="Primary mobile">
             <ul className="space-y-1 border-t border-line px-4 py-3">
-              {navigation.map((item) => (
+              {channels.map((item) => (
+                <li key={item.to}>
+                  <NavLink
+                    to={item.to}
+                    end={item.end}
+                    className={mobileNavLinkClass}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    {item.label}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <nav aria-label="Account mobile">
+            <ul className="space-y-1 border-t border-line px-4 py-3">
+              {accountLinks.map((item) => (
                 <li key={item.to}>
                   <NavLink
                     to={item.to}
@@ -134,13 +178,13 @@ export default function AppShell() {
         </div>
       </header>
 
-      <main id="main" className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
+      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-10">
         <Outlet />
       </main>
 
       <footer className="border-t border-line bg-surface">
-        <div className="mx-auto w-full max-w-5xl px-4 py-6 text-sm text-ink-muted">
-          ft_transcendence — Week 1 foundation
+        <div className="mx-auto w-full max-w-6xl px-4 py-6 text-sm text-ink-muted">
+          Social Network — ft_transcendence
         </div>
       </footer>
     </div>
