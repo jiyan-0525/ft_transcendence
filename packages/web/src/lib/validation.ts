@@ -1,13 +1,20 @@
 /**
  * Form validation rules shared by the auth pages.
  *
- * They live here rather than inside a component so the login and register
- * forms agree on what a valid email or password is, and so the rules can be
- * unit-tested without rendering a form.
+ * These mirror `packages/server/app/schemas.py`. The server stays the source
+ * of truth; the client only catches obvious mistakes before a request is sent.
  */
 
-/** Minimum password length used by registration and shown in the hint. */
-export const MIN_PASSWORD_LENGTH = 12
+/** Matches `RegisterRequest.password` in schemas.py (min_length=15). */
+export const MIN_PASSWORD_LENGTH = 15
+/** Matches `RegisterRequest.password` (max_length=128). */
+export const MAX_PASSWORD_LENGTH = 128
+/** Matches `Username` in schemas.py. */
+export const MIN_USERNAME_LENGTH = 3
+export const MAX_USERNAME_LENGTH = 50
+const USERNAME_PATTERN = /^[A-Za-z0-9_]+$/
+/** Matches `RegisterRequest.email` (max_length=254). */
+const MAX_EMAIL_LENGTH = 254
 
 /**
  * Deliberately simple: something, an `@`, something, a dot, something.
@@ -23,7 +30,26 @@ export function validateEmail(value: string): string | undefined {
   const email = value.trim()
 
   if (!email) return 'Enter your email address.'
-  if (!isValidEmail(email)) return 'Enter a valid email address.'
+  if (!isValidEmail(email) || email.length > MAX_EMAIL_LENGTH) {
+    return 'Enter a valid email address.'
+  }
+
+  return undefined
+}
+
+export function validateUsername(value: string): string | undefined {
+  const username = value.trim()
+
+  if (!username) return 'Choose a username.'
+  if (username.length < MIN_USERNAME_LENGTH) {
+    return `Use at least ${MIN_USERNAME_LENGTH} characters.`
+  }
+  if (username.length > MAX_USERNAME_LENGTH) {
+    return `Use at most ${MAX_USERNAME_LENGTH} characters.`
+  }
+  if (!USERNAME_PATTERN.test(username)) {
+    return 'Use only letters, numbers and underscores.'
+  }
 
   return undefined
 }
@@ -32,6 +58,9 @@ export function validatePassword(value: string): string | undefined {
   if (!value) return 'Enter your password.'
   if (value.length < MIN_PASSWORD_LENGTH) {
     return `Use at least ${MIN_PASSWORD_LENGTH} characters.`
+  }
+  if (value.length > MAX_PASSWORD_LENGTH) {
+    return `Use at most ${MAX_PASSWORD_LENGTH} characters.`
   }
 
   return undefined

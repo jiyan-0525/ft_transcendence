@@ -2,16 +2,15 @@ import { useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Alert, Button, Card, Input } from '@/components/ui'
+import type { RegisterRequest } from '@/types/api'
 import {
   MIN_PASSWORD_LENGTH,
   validateEmail,
   validatePassword,
+  validateUsername,
 } from '@/lib/validation'
 
-type RegisterValues = {
-  displayName: string
-  email: string
-  password: string
+type RegisterValues = RegisterRequest & {
   confirmPassword: string
   accepted: boolean
 }
@@ -19,8 +18,8 @@ type RegisterValues = {
 type RegisterErrors = Partial<Record<keyof RegisterValues, string>>
 
 const emptyValues: RegisterValues = {
-  displayName: '',
   email: '',
+  username: '',
   password: '',
   confirmPassword: '',
   accepted: false,
@@ -29,17 +28,18 @@ const emptyValues: RegisterValues = {
 /**
  * RegisterPage — client-side form for /register.
  *
- * Mirrors the rules the server will enforce: a display name, a valid email,
- * a password of at least 12 characters, a matching confirmation, and explicit
- * consent. Nothing is sent yet, so a valid submit says so instead of faking
- * success.
+ * Fields match RegisterRequest exactly: email, username and password. The
+ * confirmation and consent fields are UI-only and never sent. Nothing is sent
+ * yet, so a valid submit says so instead of faking success.
  */
 export default function RegisterPage() {
   const [values, setValues] = useState<RegisterValues>(emptyValues)
   const [errors, setErrors] = useState<RegisterErrors>({})
   const [submitted, setSubmitted] = useState(false)
 
-  function handleChange(field: Exclude<keyof RegisterValues, 'accepted'>) {
+  function handleChange(
+    field: Exclude<keyof RegisterValues, 'accepted'>,
+  ) {
     return (event: ChangeEvent<HTMLInputElement>) => {
       const { value } = event.target
 
@@ -61,16 +61,12 @@ export default function RegisterPage() {
     event.preventDefault()
 
     const nextErrors: RegisterErrors = {}
-    const name = values.displayName.trim()
-
-    if (!name) {
-      nextErrors.displayName = 'Enter a display name.'
-    } else if (name.length < 2) {
-      nextErrors.displayName = 'Use at least 2 characters.'
-    }
 
     const emailError = validateEmail(values.email)
     if (emailError) nextErrors.email = emailError
+
+    const usernameError = validateUsername(values.username)
+    if (usernameError) nextErrors.username = usernameError
 
     const passwordError = validatePassword(values.password)
     if (passwordError) nextErrors.password = passwordError
@@ -123,16 +119,6 @@ export default function RegisterPage() {
         aria-label="Create account"
       >
         <Input
-          label="Display name"
-          name="displayName"
-          autoComplete="nickname"
-          placeholder="How friends will see you"
-          value={values.displayName}
-          onChange={handleChange('displayName')}
-          error={errors.displayName}
-        />
-
-        <Input
           label="Email"
           type="email"
           name="email"
@@ -141,6 +127,17 @@ export default function RegisterPage() {
           value={values.email}
           onChange={handleChange('email')}
           error={errors.email}
+        />
+
+        <Input
+          label="Username"
+          name="username"
+          autoComplete="username"
+          placeholder="letters, numbers, _"
+          value={values.username}
+          onChange={handleChange('username')}
+          hint="3–50 characters: letters, numbers and underscores."
+          error={errors.username}
         />
 
         <Input
