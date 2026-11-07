@@ -3,8 +3,10 @@ import AppShell from './components/layout/AppShell'
 import AuthLayout from './components/layout/AuthLayout'
 import DesignSystemPage from './pages/DesignSystemPage'
 import FeedPage from './pages/FeedPage'
+import LoginPage from './pages/LoginPage'
 import NotFoundPage from './pages/NotFoundPage'
 import PlaceholderPage from './pages/PlaceholderPage'
+import RegisterPage from './pages/RegisterPage'
 import RequireAuth from './routes/RequireAuth'
 
 function planned(title: string, description: string) {
@@ -24,17 +26,11 @@ export const routes: RouteObject[] = [
     children: [
       {
         path: '/login',
-        element: planned(
-          'Log in',
-          'Email and password login, plus one OAuth provider.',
-        ),
+        element: <LoginPage />,
       },
       {
         path: '/register',
-        element: planned(
-          'Create account',
-          'Email and password registration with server-side validation.',
-        ),
+        element: <RegisterPage />,
       },
     ],
   },

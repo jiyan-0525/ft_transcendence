@@ -25,6 +25,14 @@ describe('routes', () => {
     ).toBeInTheDocument()
   })
 
+  it('renders the registration page at /register', () => {
+    renderAt('/register')
+
+    expect(
+      screen.getByRole('heading', { name: /^create account$/i }),
+    ).toBeInTheDocument()
+  })
+
   it('renders the design system page at /design', () => {
     renderAt('/design')
 
