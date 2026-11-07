@@ -1,24 +1,23 @@
 import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
+import { useAuthStatus } from '@/stores/auth'
+import SessionChecking from './SessionChecking'
 
-// TODO(auth): replace with real session state once the API lands.
-// A function, not a constant, so the guard reads like the final version.
-function isAuthenticated() {
-  return true
-}
-
-type RequireAuthProps = {
+type GuardProps = {
   children: ReactNode
 }
 
 /**
- * Route guard skeleton. Today it lets everyone through; once auth is
- * implemented only this function changes and route definitions stay the same.
+ * Lets signed-in users through. Guests are sent to /login and the attempted
+ * URL is remembered, so login can send them back.
  */
-export default function RequireAuth({ children }: RequireAuthProps) {
+export default function RequireAuth({ children }: GuardProps) {
+  const status = useAuthStatus()
   const location = useLocation()
 
-  if (!isAuthenticated()) {
+  if (status === 'unknown') return <SessionChecking />
+
+  if (status === 'guest') {
     return <Navigate to="/login" replace state={{ from: location }} />
   }
 

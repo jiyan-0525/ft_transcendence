@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { selectIsAdmin, useAuthStore } from '@/stores/auth'
 import Brand from './Brand'
 
 type NavItem = {
@@ -26,17 +27,17 @@ const channels: NavItem[] = [
   { to: '/search', label: 'Search' },
 ]
 
-const accountLinks: NavItem[] = [
-  // Temporary entry points: there is no session store yet, so signed-out
-  // pages must be reachable from the product header. Once auth state exists
-  // these move to a signed-out header and the account links below move into
-  // the avatar menu.
+const guestLinks: NavItem[] = [
   { to: '/login', label: 'Log in' },
   { to: '/register', label: 'Create account' },
+]
+
+const memberLinks: NavItem[] = [
   { to: '/profile/me', label: 'Profile', desktopOnly: true },
   { to: '/settings', label: 'Settings', desktopOnly: true },
-  { to: '/admin', label: 'Admin', desktopOnly: true },
 ]
+
+const adminLink: NavItem = { to: '/admin', label: 'Admin', desktopOnly: true }
 
 const baseLink = 'rounded-full px-3 py-2 text-sm font-medium transition-colors'
 
@@ -63,6 +64,10 @@ function mobileCtaLinkClass() {
   return 'block rounded-md bg-aurora px-3 py-2 text-base font-semibold text-white'
 }
 
+const signOutClass = `${baseLink} text-ink-muted hover:bg-surface-muted hover:text-ink`
+const mobileSignOutClass =
+  'block w-full rounded-md px-3 py-2 text-left text-base font-medium text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink'
+
 /**
  * AppShell — the outer frame for the authenticated product area.
  * It is a layout route: React Router renders it once and swaps only the
@@ -71,7 +76,18 @@ function mobileCtaLinkClass() {
 export default function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
   const menuButtonRef = useRef<HTMLButtonElement>(null)
+
+  const status = useAuthStore((state) => state.status)
+  const user = useAuthStore((state) => state.user)
+  const logout = useAuthStore((state) => state.logout)
+  const isAdmin = useAuthStore(selectIsAdmin)
+
+  const isSignedIn = status === 'authenticated'
+  const accountLinks: NavItem[] = isSignedIn
+    ? [...memberLinks, ...(isAdmin ? [adminLink] : [])]
+    : guestLinks
 
   // Close the menu after any navigation.
   useEffect(() => {
@@ -93,6 +109,15 @@ export default function AppShell() {
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [menuOpen])
 
+  async function handleSignOut() {
+    setMenuOpen(false)
+    try {
+      await logout()
+    } finally {
+      navigate('/login', { replace: true })
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-canvas">
       {/* Keyboard/screen-reader users can jump straight past the header. */}
@@ -110,6 +135,12 @@ export default function AppShell() {
           {/* Desktop account links */}
           <nav aria-label="Account" className="hidden sm:block">
             <ul className="flex items-center gap-1">
+              {isSignedIn && user ? (
+                <li className="hidden px-2 text-sm text-ink-muted md:block">
+                  @{user.username}
+                </li>
+              ) : null}
+
               {accountLinks.map((item) => (
                 <li
                   key={item.to}
@@ -126,6 +157,18 @@ export default function AppShell() {
                   </NavLink>
                 </li>
               ))}
+
+              {isSignedIn ? (
+                <li>
+                  <button
+                    type="button"
+                    className={signOutClass}
+                    onClick={handleSignOut}
+                  >
+                    Sign out
+                  </button>
+                </li>
+              ) : null}
             </ul>
           </nav>
 
@@ -198,6 +241,18 @@ export default function AppShell() {
                   </NavLink>
                 </li>
               ))}
+
+              {isSignedIn ? (
+                <li>
+                  <button
+                    type="button"
+                    className={mobileSignOutClass}
+                    onClick={handleSignOut}
+                  >
+                    Sign out
+                  </button>
+                </li>
+              ) : null}
             </ul>
           </nav>
         </div>

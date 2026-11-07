@@ -1,24 +1,37 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { register as mockRegister, resetMockAuth } from '@/lib/mock/auth'
+import { useAuthStore } from '@/stores/auth'
 import RegisterPage from './RegisterPage'
 
 function renderRegister() {
   render(
-    <MemoryRouter>
-      <RegisterPage />
+    <MemoryRouter initialEntries={['/register']}>
+      <Routes>
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/login" element={<p>Login page</p>} />
+      </Routes>
     </MemoryRouter>,
   )
 }
 
-async function fillValidForm(password = 'correct horse battery') {
-  await userEvent.type(screen.getByLabelText('Email'), 'ada@example.com')
-  await userEvent.type(screen.getByLabelText('Username'), 'ada_lovelace')
+async function fillValidForm(
+  { email = 'ada@example.com', username = 'ada_lovelace' } = {},
+  password = 'correct horse battery',
+) {
+  await userEvent.type(screen.getByLabelText('Email'), email)
+  await userEvent.type(screen.getByLabelText('Username'), username)
   await userEvent.type(screen.getByLabelText('Password'), password)
   await userEvent.type(screen.getByLabelText('Confirm password'), password)
   await userEvent.click(screen.getByLabelText(/i agree to the community/i))
 }
+
+beforeEach(() => {
+  resetMockAuth()
+  useAuthStore.setState({ status: 'guest', user: null })
+})
 
 describe('RegisterPage', () => {
   it('renders the registration form with the server fields', () => {
@@ -40,22 +53,7 @@ describe('RegisterPage', () => {
       screen.getByRole('button', { name: 'Create account' }),
     )
 
-    expect(
-      screen.getByText('Use at least 15 characters.'),
-    ).toBeInTheDocument()
-  })
-
-  it('accepts a password of exactly 15 characters', async () => {
-    renderRegister()
-
-    await fillValidForm('fifteenchars123')
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Create account' }),
-    )
-
-    expect(
-      screen.getByText(/nothing was sent or saved/i),
-    ).toBeInTheDocument()
+    expect(screen.getByText('Use at least 15 characters.')).toBeInTheDocument()
   })
 
   it('rejects usernames with characters the server does not allow', async () => {
@@ -103,16 +101,33 @@ describe('RegisterPage', () => {
     ).toBeInTheDocument()
   })
 
-  it('says the auth API is missing instead of faking a signup', async () => {
+  it('creates the account and sends the user to login without signing in', async () => {
     renderRegister()
 
-    await fillValidForm()
+    await fillValidForm({}, 'fifteenchars123')
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Create account' }),
+    )
+
+    expect(await screen.findByText('Login page')).toBeInTheDocument()
+    expect(useAuthStore.getState().status).toBe('guest')
+  })
+
+  it('shows a taken email next to the email field', async () => {
+    await mockRegister({
+      email: 'ada@example.com',
+      username: 'someone_else',
+      password: 'correct horse battery',
+    })
+    renderRegister()
+
+    await fillValidForm({ username: 'ada_lovelace' })
     await userEvent.click(
       screen.getByRole('button', { name: 'Create account' }),
     )
 
     expect(
-      screen.getByText(/nothing was sent or saved/i),
+      await screen.findByText('This email is already registered.'),
     ).toBeInTheDocument()
   })
 })

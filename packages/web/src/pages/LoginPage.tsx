@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Alert, Button, Card, Input } from '@/components/ui'
+import { ApiError } from '@/lib/api'
 import { validateEmail } from '@/lib/validation'
+import { useAuthStore } from '@/stores/auth'
 
 type LoginValues = {
   email: string
@@ -11,21 +13,26 @@ type LoginValues = {
 
 type LoginErrors = Partial<Record<keyof LoginValues, string>>
 
-type Status = 'api-missing' | 'oauth-missing' | null
-
 const emptyValues: LoginValues = { email: '', password: '' }
 
 /**
- * LoginPage — client-side form for /login.
+ * LoginPage — the sign-in form for /login.
  *
- * The auth API does not exist yet, so a valid submit does not pretend to sign
- * anyone in. It shows an explicit "not connected" message instead. Validation
- * runs on submit and clears per field as the user types.
+ * On success the store becomes authenticated and RequireGuest sends the user
+ * back to the page they asked for, so this page does not navigate itself.
  */
 export default function LoginPage() {
+  const login = useAuthStore((state) => state.login)
+  const location = useLocation()
+  const justRegistered = Boolean(
+    (location.state as { registered?: boolean } | null)?.registered,
+  )
+
   const [values, setValues] = useState<LoginValues>(emptyValues)
   const [errors, setErrors] = useState<LoginErrors>({})
-  const [status, setStatus] = useState<Status>(null)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [oauthNotice, setOauthNotice] = useState(false)
 
   function handleChange(field: keyof LoginValues) {
     return (event: ChangeEvent<HTMLInputElement>) => {
@@ -33,11 +40,11 @@ export default function LoginPage() {
 
       setValues((current) => ({ ...current, [field]: value }))
       setErrors((current) => ({ ...current, [field]: undefined }))
-      setStatus(null)
+      setFormError(null)
     }
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     const nextErrors: LoginErrors = {}
@@ -49,13 +56,22 @@ export default function LoginPage() {
     if (!values.password) nextErrors.password = 'Enter your password.'
 
     setErrors(nextErrors)
+    setFormError(null)
 
-    if (Object.keys(nextErrors).length > 0) {
-      setStatus(null)
-      return
+    if (Object.keys(nextErrors).length > 0) return
+
+    setSubmitting(true)
+    try {
+      await login({ email: values.email.trim(), password: values.password })
+    } catch (error) {
+      setFormError(
+        error instanceof ApiError
+          ? error.message
+          : 'Something went wrong. Please try again.',
+      )
+    } finally {
+      setSubmitting(false)
     }
-
-    setStatus('api-missing')
   }
 
   return (
@@ -72,14 +88,19 @@ export default function LoginPage() {
         </p>
       </header>
 
-      {status === 'api-missing' ? (
-        <Alert tone="info" title="Auth API not connected" className="mt-6">
-          The backend is not running yet, so these credentials were not sent
-          anywhere.
+      {justRegistered ? (
+        <Alert tone="success" title="Account created" className="mt-6">
+          You can log in now.
         </Alert>
       ) : null}
 
-      {status === 'oauth-missing' ? (
+      {formError ? (
+        <Alert tone="danger" title="Could not log in" className="mt-6">
+          {formError}
+        </Alert>
+      ) : null}
+
+      {oauthNotice ? (
         <Alert tone="info" title="OAuth not connected" className="mt-6">
           GitHub sign-in lands when the auth service is ready.
         </Alert>
@@ -112,7 +133,7 @@ export default function LoginPage() {
           error={errors.password}
         />
 
-        <Button type="submit" fullWidth>
+        <Button type="submit" fullWidth loading={submitting}>
           Log in
         </Button>
       </form>
@@ -126,7 +147,7 @@ export default function LoginPage() {
       <Button
         variant="secondary"
         fullWidth
-        onClick={() => setStatus('oauth-missing')}
+        onClick={() => setOauthNotice(true)}
       >
         Continue with GitHub
       </Button>

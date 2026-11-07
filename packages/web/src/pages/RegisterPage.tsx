@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Alert, Button, Card, Input } from '@/components/ui'
-import type { RegisterRequest } from '@/types/api'
+import { ApiError } from '@/lib/api'
 import {
   MIN_PASSWORD_LENGTH,
   validateEmail,
   validatePassword,
   validateUsername,
 } from '@/lib/validation'
+import { useAuthStore } from '@/stores/auth'
+import type { RegisterRequest } from '@/types/api'
 
 type RegisterValues = RegisterRequest & {
   confirmPassword: string
@@ -26,16 +28,20 @@ const emptyValues: RegisterValues = {
 }
 
 /**
- * RegisterPage — client-side form for /register.
+ * RegisterPage — the sign-up form for /register.
  *
- * Fields match RegisterRequest exactly: email, username and password. The
- * confirmation and consent fields are UI-only and never sent. Nothing is sent
- * yet, so a valid submit says so instead of faking success.
+ * Fields match RegisterRequest exactly. The confirmation and consent fields
+ * are UI-only and never sent. A successful registration does not sign the
+ * user in: they are sent to /login with a notice (protocol D10).
  */
 export default function RegisterPage() {
+  const register = useAuthStore((state) => state.register)
+  const navigate = useNavigate()
+
   const [values, setValues] = useState<RegisterValues>(emptyValues)
   const [errors, setErrors] = useState<RegisterErrors>({})
-  const [submitted, setSubmitted] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
   function handleChange(
     field: Exclude<keyof RegisterValues, 'accepted'>,
@@ -45,7 +51,7 @@ export default function RegisterPage() {
 
       setValues((current) => ({ ...current, [field]: value }))
       setErrors((current) => ({ ...current, [field]: undefined }))
-      setSubmitted(false)
+      setFormError(null)
     }
   }
 
@@ -54,10 +60,10 @@ export default function RegisterPage() {
 
     setValues((current) => ({ ...current, accepted: checked }))
     setErrors((current) => ({ ...current, accepted: undefined }))
-    setSubmitted(false)
+    setFormError(null)
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     const nextErrors: RegisterErrors = {}
@@ -82,13 +88,42 @@ export default function RegisterPage() {
     }
 
     setErrors(nextErrors)
+    setFormError(null)
 
-    if (Object.keys(nextErrors).length > 0) {
-      setSubmitted(false)
-      return
+    if (Object.keys(nextErrors).length > 0) return
+
+    setSubmitting(true)
+    try {
+      await register({
+        email: values.email.trim(),
+        username: values.username.trim(),
+        password: values.password,
+      })
+      navigate('/login', { replace: true, state: { registered: true } })
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'CONFLICT') {
+        // Show the conflict next to the field it refers to, when we can tell.
+        const field = /email/i.test(error.message)
+          ? 'email'
+          : /username/i.test(error.message)
+            ? 'username'
+            : undefined
+
+        if (field) {
+          setErrors((current) => ({ ...current, [field]: error.message }))
+        } else {
+          setFormError(error.message)
+        }
+      } else {
+        setFormError(
+          error instanceof ApiError
+            ? error.message
+            : 'Something went wrong. Please try again.',
+        )
+      }
+    } finally {
+      setSubmitting(false)
     }
-
-    setSubmitted(true)
   }
 
   return (
@@ -105,10 +140,9 @@ export default function RegisterPage() {
         </p>
       </header>
 
-      {submitted ? (
-        <Alert tone="info" title="Auth API not connected" className="mt-6">
-          Your details passed validation, but the backend is not running yet —
-          nothing was sent or saved.
+      {formError ? (
+        <Alert tone="danger" title="Could not create the account" className="mt-6">
+          {formError}
         </Alert>
       ) : null}
 
@@ -186,7 +220,7 @@ export default function RegisterPage() {
           ) : null}
         </div>
 
-        <Button type="submit" fullWidth>
+        <Button type="submit" fullWidth loading={submitting}>
           Create account
         </Button>
       </form>

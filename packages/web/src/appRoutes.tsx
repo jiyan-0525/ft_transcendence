@@ -7,7 +7,9 @@ import LoginPage from './pages/LoginPage'
 import NotFoundPage from './pages/NotFoundPage'
 import PlaceholderPage from './pages/PlaceholderPage'
 import RegisterPage from './pages/RegisterPage'
+import RequireAdmin from './routes/RequireAdmin'
 import RequireAuth from './routes/RequireAuth'
+import RequireGuest from './routes/RequireGuest'
 
 function planned(title: string, description: string) {
   return <PlaceholderPage title={title} description={description} />
@@ -16,9 +18,9 @@ function planned(title: string, description: string) {
 /**
  * Route table from Social_Network.pdf §"Pages to build".
  *
- * Auth pages sit under AuthLayout (no product navigation). Everything else
- * sits under AppShell. Feature pages are placeholders for now; the route
- * itself is final so navigation and guards do not change later.
+ * Auth pages sit under AuthLayout and are for guests only. Everything else
+ * sits under AppShell. Guards decide who may open a page; the route paths
+ * themselves do not change when a guard is added.
  */
 export const routes: RouteObject[] = [
   {
@@ -26,11 +28,19 @@ export const routes: RouteObject[] = [
     children: [
       {
         path: '/login',
-        element: <LoginPage />,
+        element: (
+          <RequireGuest>
+            <LoginPage />
+          </RequireGuest>
+        ),
       },
       {
         path: '/register',
-        element: <RegisterPage />,
+        element: (
+          <RequireGuest>
+            <RegisterPage />
+          </RequireGuest>
+        ),
       },
     ],
   },
@@ -49,21 +59,33 @@ export const routes: RouteObject[] = [
       },
       {
         path: 'friends',
-        element: planned(
-          'Friends',
-          'Send, accept, reject and remove friend connections.',
+        element: (
+          <RequireAuth>
+            {planned(
+              'Friends',
+              'Send, accept, reject and remove friend connections.',
+            )}
+          </RequireAuth>
         ),
       },
       {
         path: 'messages',
-        element: planned(
-          'Messages',
-          'Persistent one-to-one chat with real-time delivery.',
+        element: (
+          <RequireAuth>
+            {planned(
+              'Messages',
+              'Persistent one-to-one chat with real-time delivery.',
+            )}
+          </RequireAuth>
         ),
       },
       {
         path: 'messages/:conversationId',
-        element: planned('Conversation', 'Message history and live updates.'),
+        element: (
+          <RequireAuth>
+            {planned('Conversation', 'Message history and live updates.')}
+          </RequireAuth>
+        ),
       },
       {
         path: 'communities',
@@ -114,9 +136,13 @@ export const routes: RouteObject[] = [
       },
       {
         path: 'notifications',
-        element: planned(
-          'Notifications',
-          'Unread count, read state and links to relevant content.',
+        element: (
+          <RequireAuth>
+            {planned(
+              'Notifications',
+              'Unread count, read state and links to relevant content.',
+            )}
+          </RequireAuth>
         ),
       },
       {
@@ -148,12 +174,12 @@ export const routes: RouteObject[] = [
       {
         path: 'admin',
         element: (
-          <RequireAuth>
+          <RequireAdmin>
             <PlaceholderPage
               title="Administration"
               description="Manage users and roles and moderate content."
             />
-          </RequireAuth>
+          </RequireAdmin>
         ),
       },
 

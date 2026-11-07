@@ -1,8 +1,16 @@
-import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
+import { register as mockRegister, resetMockAuth } from '@/lib/mock/auth'
+import { useAuthStore } from '@/stores/auth'
 import LoginPage from './LoginPage'
+
+const account = {
+  email: 'ada@example.com',
+  username: 'ada_lovelace',
+  password: 'correct horse battery',
+}
 
 function renderLogin() {
   render(
@@ -12,27 +20,28 @@ function renderLogin() {
   )
 }
 
+beforeEach(() => {
+  resetMockAuth()
+  useAuthStore.setState({ status: 'guest', user: null })
+})
+
 describe('LoginPage', () => {
   it('renders the email and password fields', () => {
     renderLogin()
 
-    expect(
-      screen.getByRole('heading', { name: 'Log in' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Log in' })).toBeInTheDocument()
     expect(screen.getByLabelText('Email')).toBeInTheDocument()
     expect(screen.getByLabelText('Password')).toBeInTheDocument()
   })
 
-  it('rejects an empty submit without contacting anything', async () => {
+  it('rejects an empty submit without contacting the server', async () => {
     renderLogin()
 
     await userEvent.click(screen.getByRole('button', { name: 'Log in' }))
 
     expect(screen.getByText('Enter your email address.')).toBeInTheDocument()
     expect(screen.getByText('Enter your password.')).toBeInTheDocument()
-    expect(
-      screen.queryByText(/auth api not connected/i),
-    ).not.toBeInTheDocument()
+    expect(useAuthStore.getState().status).toBe('guest')
   })
 
   it('rejects an invalid email', async () => {
@@ -45,16 +54,32 @@ describe('LoginPage', () => {
     expect(screen.getByText('Enter a valid email address.')).toBeInTheDocument()
   })
 
-  it('says the auth API is missing instead of faking a login', async () => {
+  it('signs the user in with valid credentials', async () => {
+    await mockRegister(account)
     renderLogin()
 
-    await userEvent.type(screen.getByLabelText('Email'), 'ada@example.com')
-    await userEvent.type(screen.getByLabelText('Password'), 'secret')
+    await userEvent.type(screen.getByLabelText('Email'), account.email)
+    await userEvent.type(screen.getByLabelText('Password'), account.password)
+    await userEvent.click(screen.getByRole('button', { name: 'Log in' }))
+
+    await waitFor(() =>
+      expect(useAuthStore.getState().status).toBe('authenticated'),
+    )
+    expect(useAuthStore.getState().user?.username).toBe('ada_lovelace')
+  })
+
+  it('shows the server error for a wrong password', async () => {
+    await mockRegister(account)
+    renderLogin()
+
+    await userEvent.type(screen.getByLabelText('Email'), account.email)
+    await userEvent.type(screen.getByLabelText('Password'), 'wrong password here')
     await userEvent.click(screen.getByRole('button', { name: 'Log in' }))
 
     expect(
-      screen.getByText(/credentials were not sent anywhere/i),
+      await screen.findByText('Invalid email or password.'),
     ).toBeInTheDocument()
+    expect(useAuthStore.getState().status).toBe('guest')
   })
 
   it('explains that OAuth is not connected yet', async () => {
@@ -64,8 +89,6 @@ describe('LoginPage', () => {
       screen.getByRole('button', { name: /continue with github/i }),
     )
 
-    expect(
-      screen.getByText(/github sign-in lands/i),
-    ).toBeInTheDocument()
+    expect(screen.getByText(/github sign-in lands/i)).toBeInTheDocument()
   })
 })
