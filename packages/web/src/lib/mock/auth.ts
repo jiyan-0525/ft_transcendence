@@ -26,12 +26,32 @@ function publicUser(user: MockUser): UserResponse {
   return rest
 }
 
-/** Clears all mock state. Used by tests and by a manual dev reset. */
+/** Demo accounts from plan §7, so sign-in works without registering first. */
+function seedUsers(): void {
+  const now = new Date().toISOString()
+  const seeds = [
+    { email: 'alice@example.com', username: 'alice' },
+    { email: 'bob@example.com', username: 'bob' },
+  ]
+  users = seeds.map((seed) => ({
+    id: nextId++,
+    email: seed.email,
+    username: seed.username,
+    role: 'USER',
+    is_active: true,
+    created_at: now,
+    password: 'Password123456789!',
+  }))
+}
+
+/** Restores the seeded state. Used by tests and by a manual dev reset. */
 export function resetMockAuth(): void {
-  users = []
   nextId = 1
   sessionUserId = null
+  seedUsers()
 }
+
+resetMockAuth()
 
 export async function register(input: RegisterRequest): Promise<UserResponse> {
   const email = input.email.toLowerCase()

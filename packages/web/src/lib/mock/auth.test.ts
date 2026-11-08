@@ -12,6 +12,12 @@ beforeEach(() => {
 })
 
 describe('mock auth', () => {
+  it('signs in with the seeded demo account', async () => {
+    await login({ email: 'alice@example.com', password: 'Password123456789!' })
+
+    await expect(me()).resolves.toMatchObject({ username: 'alice' })
+  })
+
   it('registers without signing the user in', async () => {
     const user = await register(account)
 
