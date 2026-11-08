@@ -47,6 +47,6 @@ const mockClient: AuthClient = {
 
 // Mocks stay on unless VITE_USE_MOCKS is explicitly 'false', so a missing
 // variable never sends real traffic to an API that may not exist yet.
-const useMocks = import.meta.env.VITE_USE_MOCKS !== 'false'
+export const useMocks = import.meta.env.VITE_USE_MOCKS !== 'false'
 
 export const authClient: AuthClient = useMocks ? mockClient : realClient

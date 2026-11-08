@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { create } from 'zustand'
-import { authClient } from '@/lib/auth'
+import { authClient, useMocks } from '@/lib/auth'
+import { realtime } from '@/lib/ws'
 import type { LoginRequest, RegisterRequest } from '@/types/api'
 import type { User } from '@/types/models'
 
@@ -28,6 +29,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
     try {
       const user = await authClient.me()
       set({ status: 'authenticated', user })
+      startRealtime()
     } catch {
       // Any failure counts as signed out for now. A broken API must not
       // leave the user stuck on a loading screen.
@@ -38,6 +40,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
   async login(input) {
     const user = await authClient.login(input)
     set({ status: 'authenticated', user })
+    startRealtime()
   },
 
   // Registration never signs the user in (protocol D10).
@@ -46,6 +49,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
   },
 
   async logout() {
+    realtime.disconnect()
     try {
       await authClient.logout()
     } finally {
@@ -53,6 +57,11 @@ export const useAuthStore = create<AuthState>()((set) => ({
     }
   },
 }))
+
+// Mock mode has no /ws endpoint, so connecting would only retry forever.
+function startRealtime() {
+  if (!useMocks) realtime.connect()
+}
 
 export const selectIsAdmin = (state: AuthState) =>
   state.user?.role === 'ADMIN'
