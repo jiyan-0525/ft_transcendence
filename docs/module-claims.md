@@ -61,6 +61,9 @@ SQLAlchemy 2.0 and Alembic.
 **Evidence:** `packages/web/` (React SPA scaffold), `packages/server/app/`
 (FastAPI app, models, schemas), `packages/server/requirements.txt`.
 
+**Current state:** React Router (routes and guards) and Zustand (auth store) are
+in use. TanStack Query is installed but no query or mutation uses it yet.
+
 ---
 
 ## 2. Web — Major: real-time features (2 pts) · Lead C · ⬜
@@ -77,11 +80,15 @@ and presence, with persistence and reconnect recovery.
    reconnect: the missed message and notification are fetched.
 5. Open a second tab as the same user; closing one tab keeps the user online.
 
-**Evidence (planned):** `packages/server/app/realtime/`, `app/routers/chat.py`,
-`app/routers/notifications.py`, `packages/web/src/lib/ws.ts`,
-`packages/web/src/stores/`, [`protocol.md`](protocol.md) §14.
+**Evidence:** `packages/web/src/lib/ws.ts` (reconnecting client with heartbeat and
+typed frames), `packages/web/src/lib/ws.test.ts`, `packages/web/src/types/ws.ts`,
+`packages/web/src/stores/auth.ts` (connects after sign-in, closes on sign-out).
+Planned: `packages/server/app/realtime/`, `app/routers/chat.py`,
+`app/routers/notifications.py`, [`protocol.md`](protocol.md) §14.
 
-**Current state:** no WebSocket endpoint or client exists yet.
+**Current state:** the client is tested against a fake socket. It is not yet
+exercised against a server: `/ws` does not exist, and mock mode never connects.
+The heartbeat uses a `ping` frame that protocol §14.3 does not list yet.
 
 ---
 
@@ -273,11 +280,14 @@ and icon rules, used across the product.
 3. Change a design token; show the components update together.
 4. Navigate Feed, Profile and Marketplace; show the same components in use.
 
-**Evidence (planned):** `packages/web/src/components/`,
-`packages/web/src/style.css` (tokens), `pages/DesignSystemPage.tsx`.
+**Evidence:** `packages/web/src/components/ui/` (Button, Input, Textarea, Card,
+Badge, Alert, Spinner), `packages/web/src/style.css` and
+`tailwind.config.ts` (tokens), `pages/DesignSystemPage.tsx` (gallery at `/design`),
+`pages/DesignSystemPage.test.tsx`.
 
-**Current state:** Tailwind is installed and the App shell uses it; no shared
-components or gallery exist yet.
+**Current state:** 7 of the 10 required components exist. Still missing: Avatar,
+Tabs, Modal, FormField, EmptyState and Dropdown (plan A3, batch 2). Tokens and
+gallery are complete for the components that exist.
 
 ---
 
