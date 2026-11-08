@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import {
   Alert,
+  Avatar,
   Badge,
   Button,
   Card,
@@ -8,8 +10,14 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
+  Dropdown,
+  EmptyState,
+  FormField,
   Input,
+  Modal,
   Spinner,
+  TabPanel,
+  Tabs,
   Textarea,
 } from '@/components/ui'
 
@@ -129,6 +137,63 @@ const typeScale = [
   { name: 'text-2xl', className: 'text-2xl' },
   { name: 'text-4xl', className: 'text-4xl' },
 ]
+
+const avatarPicture =
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><rect width='40' height='40' fill='%23c4b5fd'/></svg>"
+
+const profileTabs = [
+  { value: 'posts', label: 'Posts' },
+  { value: 'friends', label: 'Friends' },
+  { value: 'photos', label: 'Photos' },
+]
+
+function TabsDemo() {
+  const [value, setValue] = useState('posts')
+  return (
+    <Tabs items={profileTabs} value={value} onChange={setValue} label="Profile sections">
+      <TabPanel value="posts">
+        <p className="text-sm text-ink-muted">Posts by this member appear here.</p>
+      </TabPanel>
+      <TabPanel value="friends">
+        <p className="text-sm text-ink-muted">Friends are listed here.</p>
+      </TabPanel>
+      <TabPanel value="photos">
+        <p className="text-sm text-ink-muted">Photos are shown in a grid.</p>
+      </TabPanel>
+    </Tabs>
+  )
+}
+
+function ModalDemo() {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <Button variant="danger" size="sm" onClick={() => setOpen(true)}>
+        Delete post
+      </Button>
+      <Modal
+        open={open}
+        title="Delete this post?"
+        description="This cannot be undone."
+        onClose={() => setOpen(false)}
+        footer={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="danger" size="sm" onClick={() => setOpen(false)}>
+              Delete
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-ink-muted">
+          Press Escape or click outside to close without deleting.
+        </p>
+      </Modal>
+    </>
+  )
+}
 
 export default function DesignSystemPage() {
   return (
@@ -343,6 +408,85 @@ export default function DesignSystemPage() {
                 Cancel
               </Button>
             </CardFooter>
+          </Card>
+
+          <Card className="p-5">
+            <h3 className="font-display text-base font-semibold text-ink">Avatar</h3>
+            <div className="mt-4 flex flex-wrap items-center gap-4">
+              <Avatar name="Ada Lovelace" size="sm" />
+              <Avatar name="Ada Lovelace" size="md" status="online" />
+              <Avatar name="Ada Lovelace" size="lg" status="offline" />
+              <Avatar name="Grace Hopper" src={avatarPicture} size="md" status="online" />
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <h3 className="font-display text-base font-semibold text-ink">Tabs</h3>
+            <div className="mt-4">
+              <TabsDemo />
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <h3 className="font-display text-base font-semibold text-ink">Modal</h3>
+            <div className="mt-4">
+              <ModalDemo />
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <h3 className="font-display text-base font-semibold text-ink">Form field</h3>
+            <div className="mt-4 space-y-4">
+              <FormField label="Country" required hint="Where you live now.">
+                {(control) => (
+                  <select
+                    {...control}
+                    className="h-11 w-full rounded border border-line bg-surface px-3 text-ink focus:border-brand"
+                  >
+                    <option>France</option>
+                    <option>Germany</option>
+                  </select>
+                )}
+              </FormField>
+              <FormField label="Topic" error="Choose a topic before posting.">
+                {(control) => (
+                  <select
+                    {...control}
+                    className="h-11 w-full rounded border border-danger bg-surface px-3 text-ink"
+                  >
+                    <option>Select…</option>
+                    <option>Music</option>
+                  </select>
+                )}
+              </FormField>
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <h3 className="font-display text-base font-semibold text-ink">Empty state</h3>
+            <div className="mt-4">
+              <EmptyState
+                title="No posts yet"
+                description="Share something to start the feed."
+                icon={<span className="text-lg font-semibold">+</span>}
+                action={<Button size="sm">Write a post</Button>}
+              />
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <h3 className="font-display text-base font-semibold text-ink">Dropdown</h3>
+            <div className="mt-4 flex flex-wrap items-center gap-6">
+              <Dropdown
+                trigger={<Avatar name="Ada Lovelace" size="sm" />}
+                triggerLabel="Account menu for Ada Lovelace"
+                items={[
+                  { label: 'Profile', onSelect: () => {} },
+                  { label: 'Settings', onSelect: () => {}, disabled: true },
+                  { label: 'Sign out', onSelect: () => {}, tone: 'danger' },
+                ]}
+              />
+            </div>
           </Card>
         </div>
       </section>
