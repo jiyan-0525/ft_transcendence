@@ -28,8 +28,8 @@
 
 One section per working day. Append new days; never rewrite earlier ones. At the
 end of each day record the goal, completed items with commit hashes, blockers and
-the next step. Keep this filename (`A_0511.md`) as the plan's start date; do not
-create a new `A_0512.md`.
+the next step. This single file covers the whole of A's plan from 2026-11-05
+onward, so keep appending to it rather than creating a new plan file per date.
 
 ### 2026-11-05 — Day 1: React foundation (done)
 
