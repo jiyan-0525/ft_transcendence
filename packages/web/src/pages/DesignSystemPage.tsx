@@ -212,6 +212,14 @@ export default function DesignSystemPage() {
               <Button loading>Loading</Button>
               <Button disabled>Disabled</Button>
             </div>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <Button size="sm">Small</Button>
+              <Button size="md">Medium</Button>
+              <Button size="lg">Large</Button>
+            </div>
+            <div className="mt-4">
+              <Button fullWidth>Full width</Button>
+            </div>
           </Card>
 
           <Card className="p-5">
@@ -253,9 +261,19 @@ export default function DesignSystemPage() {
                 type="password"
                 error="Use at least 12 characters."
               />
+              <Input
+                label="Username"
+                defaultValue="ada_lovelace"
+                disabled
+                hint="Usernames cannot be changed."
+              />
               <Textarea
                 label="Bio"
                 placeholder="Tell people about yourself"
+              />
+              <Textarea
+                label="Signature"
+                error="Signatures must be shorter than 20 characters."
               />
             </div>
           </Card>
@@ -290,6 +308,16 @@ export default function DesignSystemPage() {
                 <Spinner size="lg" /> Large
               </span>
             </div>
+          </Card>
+
+          <Card variant="muted" className="p-5">
+            <h3 className="font-display text-base font-semibold text-ink">
+              Card variants
+            </h3>
+            <p className="mt-2 text-sm text-ink-muted">
+              Default sits on the surface colour. Muted sits on the canvas and
+              is used for secondary panels such as sidebars.
+            </p>
           </Card>
 
           <Card className="lg:col-span-2">
