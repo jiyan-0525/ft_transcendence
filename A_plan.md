@@ -255,6 +255,21 @@ rule on every `/api/admin` route (protocol §13).
 **Not verified:** a real connection. `/ws` does not exist on the backend, and
 `ping` is not yet in protocol §14.3.
 
+### 2026-11-08 — Day 5b: design gallery states and docs (A7, partly done)
+
+| Step | Result | Evidence |
+|---|---|---|
+| Gallery shows Button sizes and full width, Card muted, disabled and invalid fields | done | `e04d53b` |
+| Gallery test covers every component section | done | `DesignSystemPage.test.tsx` |
+| Module evidence for #1, #2 and #11 updated | done | `d8d49c5` |
+| ADR 0005 for the frontend client layer | done | `docs/decisions/0005-frontend-client-layer.md` |
+
+**Not done:** TanStack Query is installed but unused. The six components from
+A3 batch 2 are listed in Day 5c.
+
+**Next:** decide with Julie how the backend auth and `/ws` are delivered, then
+either finish A3 batch 2 or switch the app to the real API.
+
 ### 2026-11-08 — Day 5c: six remaining components (A3 batch 2, done)
 
 | Step | Result | Evidence |
@@ -281,20 +296,36 @@ rule on every `/api/admin` route (protocol §13).
 (Login and Register inputs already carry their labels; Profile and Settings are
 placeholders).
 
-### 2026-11-08 — Day 5b: design gallery states and docs (A7, partly done)
+### 2026-11-08 — Day 5 summary
 
-| Step | Result | Evidence |
-|---|---|---|
-| Gallery shows Button sizes and full width, Card muted, disabled and invalid fields | done | `e04d53b` |
-| Gallery test covers every component section | done | `DesignSystemPage.test.tsx` |
-| Module evidence for #1, #2 and #11 updated | done | `d8d49c5` |
-| ADR 0005 for the frontend client layer | done | `docs/decisions/0005-frontend-client-layer.md` |
+**Goal:** finish the client layer (A6), complete the gallery and docs (A7), and
+bring the design system to the 13 components the module requires.
 
-**Not done:** TanStack Query is installed but unused. The six components from
-A3 batch 2 are listed in Day 5c.
+**Verification:** typecheck, lint and build pass; 25 test files and 105 tests
+pass. `/design` renders (an earlier 404 was stale browser state). Mock login as
+`alice@example.com` works, and no `/ws` connection appears in mock mode, as
+intended.
 
-**Next:** decide with Julie how the backend auth and `/ws` are delivered, then
-either finish A3 batch 2 or switch the app to the real API.
+**Not verified:** a real WebSocket connection (no `/ws` on the backend), and real
+authentication (no `/api/auth/*` routes yet). Reconnect and heartbeat are covered
+only by tests with a fake socket.
+
+**Blockers and decisions:**
+1. Backend ownership: auth routes, error envelope, cookie attributes and `/ws` are
+   assigned to Julie. Needs confirmation before real integration.
+2. The heartbeat sends a `ping` frame that protocol §14.3 does not list. The server
+   answers `ws:error`, which the client ignores.
+3. TanStack Query is installed but no query uses it. Use it on a page or document
+   the deferral.
+4. FormField, Modal and Tabs appear only in the gallery.
+5. `/design` is hidden from navigation but reachable by URL in production. Gating
+   it to development builds is open.
+
+**Next:**
+1. Agree backend auth and `/ws` with Julie; then choose between a temporary fake
+   backend and the real API.
+2. Decide whether to use TanStack Query now or defer it.
+3. Decide whether to gate `/design` to development builds.
 
 ---
 
