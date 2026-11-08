@@ -281,13 +281,14 @@ and icon rules, used across the product.
 4. Navigate Feed, Profile and Marketplace; show the same components in use.
 
 **Evidence:** `packages/web/src/components/ui/` (Button, Input, Textarea, Card,
-Badge, Alert, Spinner), `packages/web/src/style.css` and
-`tailwind.config.ts` (tokens), `pages/DesignSystemPage.tsx` (gallery at `/design`),
-`pages/DesignSystemPage.test.tsx`.
+Badge, Alert, Spinner, Avatar, Tabs, Modal, FormField, EmptyState, Dropdown),
+`packages/web/src/style.css` and `tailwind.config.ts` (tokens),
+`pages/DesignSystemPage.tsx` (gallery at `/design`), and the component tests
+beside each file.
 
-**Current state:** 7 of the 10 required components exist. Still missing: Avatar,
-Tabs, Modal, FormField, EmptyState and Dropdown (plan A3, batch 2). Tokens and
-gallery are complete for the components that exist.
+**Current state:** 13 reusable components exist with keyboard and ARIA behaviour
+tested. The gallery shows each one in its states. Not yet used on product pages:
+the new components are available to them but no page composes them yet.
 
 ---
 
