@@ -4,6 +4,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  EmptyState,
 } from '@/components/ui'
 
 export default function FeedPage() {
@@ -73,21 +74,11 @@ export default function FeedPage() {
             </div>
           </Card>
 
-          {/* Empty feed */}
-          <Card className="p-8 text-center">
-            <span
-              aria-hidden="true"
-              className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-surface-muted text-lg font-bold text-brand"
-            >
-              #
-            </span>
-            <p className="mt-4 font-display text-lg font-semibold text-ink">
-              No posts yet
-            </p>
-            <p className="mt-1 text-ink-muted">
-              When the content API is connected, the newest posts appear here.
-            </p>
-          </Card>
+          <EmptyState
+            title="No posts yet"
+            description="When the content API is connected, the newest posts appear here."
+            icon={<span className="text-lg font-bold">#</span>}
+          />
         </div>
 
         {/* Sidebar */}

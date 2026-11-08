@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Avatar, Dropdown } from '@/components/ui'
+import type { DropdownItem } from '@/components/ui'
 import { selectIsAdmin, useAuthStore } from '@/stores/auth'
 import Brand from './Brand'
 
@@ -64,7 +66,6 @@ function mobileCtaLinkClass() {
   return 'block rounded-md bg-aurora px-3 py-2 text-base font-semibold text-white'
 }
 
-const signOutClass = `${baseLink} text-ink-muted hover:bg-surface-muted hover:text-ink`
 const mobileSignOutClass =
   'block w-full rounded-md px-3 py-2 text-left text-base font-medium text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink'
 
@@ -88,6 +89,15 @@ export default function AppShell() {
   const accountLinks: NavItem[] = isSignedIn
     ? [...memberLinks, ...(isAdmin ? [adminLink] : [])]
     : guestLinks
+
+  const accountMenuItems: DropdownItem[] = [
+    { label: 'Profile', onSelect: () => navigate('/profile/me') },
+    { label: 'Settings', onSelect: () => navigate('/settings') },
+    ...(isAdmin
+      ? [{ label: 'Admin', onSelect: () => navigate('/admin') }]
+      : []),
+    { label: 'Sign out', onSelect: () => void handleSignOut(), tone: 'danger' },
+  ]
 
   // Close the menu after any navigation.
   useEffect(() => {
@@ -136,39 +146,35 @@ export default function AppShell() {
           <nav aria-label="Account" className="hidden sm:block">
             <ul className="flex items-center gap-1">
               {isSignedIn && user ? (
-                <li className="hidden px-2 text-sm text-ink-muted md:block">
-                  @{user.username}
-                </li>
-              ) : null}
-
-              {accountLinks.map((item) => (
-                <li
-                  key={item.to}
-                  className={item.desktopOnly ? 'hidden xl:block' : undefined}
-                >
-                  <NavLink
-                    to={item.to}
-                    end={item.end}
-                    className={
-                      item.to === '/register' ? ctaLinkClass : navLinkClass
-                    }
-                  >
-                    {item.label}
-                  </NavLink>
-                </li>
-              ))}
-
-              {isSignedIn ? (
                 <li>
-                  <button
-                    type="button"
-                    className={signOutClass}
-                    onClick={handleSignOut}
-                  >
-                    Sign out
-                  </button>
+                  <Dropdown
+                    align="end"
+                    triggerLabel={`Account menu for @${user.username}`}
+                    trigger={
+                      <>
+                        <Avatar name={user.username} size="sm" status="online" />
+                        <span className="hidden text-ink-muted md:inline">
+                          @{user.username}
+                        </span>
+                      </>
+                    }
+                    items={accountMenuItems}
+                  />
                 </li>
-              ) : null}
+              ) : (
+                guestLinks.map((item) => (
+                  <li key={item.to}>
+                    <NavLink
+                      to={item.to}
+                      className={
+                        item.to === '/register' ? ctaLinkClass : navLinkClass
+                      }
+                    >
+                      {item.label}
+                    </NavLink>
+                  </li>
+                ))
+              )}
             </ul>
           </nav>
 

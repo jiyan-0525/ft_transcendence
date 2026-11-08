@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { routes } from '../../appRoutes'
@@ -40,27 +40,43 @@ describe('AppShell auth entry points', () => {
     expect(screen.queryByRole('button', { name: 'Sign out' })).toBeNull()
   })
 
-  it('shows the username and a sign-out button when signed in', () => {
+  it('shows an account menu with the username when signed in', () => {
     useAuthStore.setState({ status: 'authenticated', user: member })
 
     renderApp()
 
-    expect(screen.getAllByText('@ada_lovelace').length).toBeGreaterThan(0)
     expect(
-      screen.getAllByRole('button', { name: 'Sign out' }).length,
-    ).toBeGreaterThan(0)
+      screen.getByRole('button', { name: 'Account menu for @ada_lovelace' }),
+    ).toHaveAttribute('aria-expanded', 'false')
     expect(
       screen.queryAllByRole('link', { name: 'Log in' }),
     ).toHaveLength(0)
   })
 
-  it('signs out and returns to the login page', async () => {
+  it('lists the account actions inside the menu', async () => {
+    const user = userEvent.setup()
     useAuthStore.setState({ status: 'authenticated', user: member })
     renderApp()
 
-    await userEvent.click(
-      screen.getAllByRole('button', { name: 'Sign out' })[0]!,
+    await user.click(
+      screen.getByRole('button', { name: 'Account menu for @ada_lovelace' }),
     )
+
+    const menu = screen.getByRole('menu')
+    expect(within(menu).getByRole('menuitem', { name: 'Profile' })).toBeInTheDocument()
+    expect(within(menu).getByRole('menuitem', { name: 'Settings' })).toBeInTheDocument()
+    expect(within(menu).queryByRole('menuitem', { name: 'Admin' })).toBeNull()
+  })
+
+  it('signs out from the account menu and returns to the login page', async () => {
+    const user = userEvent.setup()
+    useAuthStore.setState({ status: 'authenticated', user: member })
+    renderApp()
+
+    await user.click(
+      screen.getByRole('button', { name: 'Account menu for @ada_lovelace' }),
+    )
+    await user.click(screen.getByRole('menuitem', { name: 'Sign out' }))
 
     expect(
       await screen.findByRole('heading', { name: /^log in$/i }),
