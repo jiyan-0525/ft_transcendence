@@ -108,6 +108,10 @@ proxies `/api` and `/ws` to `http://127.0.0.1:8000`. Start FastAPI with
 `make dev` for live requests. While the auth routes are still being built, set
 `VITE_USE_MOCKS=true` in `packages/web/.env.local`.
 
+The frontend includes a reconnecting WebSocket client skeleton in
+`packages/web/src/lib/ws.ts` (typed frames, heartbeat, exponential backoff with
+jitter, close on logout). It does not connect until the user is authenticated.
+
 | Command | Purpose |
 |---|---|
 | `make web-install` | Install frontend dependencies |

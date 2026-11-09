@@ -4,7 +4,7 @@
 **Date:** 2026-11-05
 **Cycle:** Sprint 1, Week 1 — React frontend foundation
 **Branch:** `A-product_Owner_jiyan` (based on `master` @ `577a89d`)
-**Status:** A2 complete (tokens + app shell); navigation aligned with the subject — A3 next
+**Status:** A5 complete (auth store, guards, forms); A6 complete (reconnecting WebSocket client skeleton) — A7/A8 next
 
 **Sources of truth**
 
@@ -241,6 +241,17 @@ focused.
 
 **Note:** `RequireAdmin` is a UI guard only. The server must enforce the same
 rule on every `/api/admin` route (protocol §13).
+
+### 2026-11-08 — Day 5: reconnecting WebSocket client (A6, done)
+
+| Step | Result | Evidence |
+|---|---|---|
+| `types/ws.ts` frame unions and connection state | done | `src/types/ws.ts` |
+| `lib/ws.ts` reconnecting client: backoff + jitter, heartbeat, typed `send`, event emitter, close on logout | done | `src/lib/ws.ts` |
+| No auto-connect before authentication | done | constructor does not connect |
+| Reconnect logs one dev line; never throws on close | done | `console.debug` in dev; try/catch around close |
+| Smoke test with a fake `WebSocket` | done | `src/lib/ws.test.ts` (8 tests) |
+| `typecheck`, `lint`, `test` (77), `build` pass | done | this commit |
 
 ---
 
@@ -542,14 +553,14 @@ there is no horizontal scroll on mobile.
 
 **Done when:** with mocks on, register → login → reload → logout works.
 
-### A6 — WebSocket client skeleton (Day 4)
+### A6 — WebSocket client skeleton (Day 4) ✅
 
-- [ ] `types/ws.ts`: client/server frame unions
-- [ ] `lib/ws.ts`: cookie-authenticated connect, exponential backoff with jitter,
+- [x] `types/ws.ts`: client/server frame unions
+- [x] `lib/ws.ts`: cookie-authenticated connect, exponential backoff with jitter,
       heartbeat, typed `send`, event emitter, close on logout
-- [ ] Do not auto-connect before authentication
-- [ ] Reconnect logs one dev line; never throws on close
-- [ ] One smoke test with a fake `WebSocket`
+- [x] Do not auto-connect before authentication
+- [x] Reconnect logs one dev line; never throws on close
+- [x] One smoke test with a fake `WebSocket` (8 tests)
 
 **Done when:** the client connects, reconnects after an artificial close and
 exposes `on("notification:new")` without console noise.
