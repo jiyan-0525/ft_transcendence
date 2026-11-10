@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { create } from 'zustand'
 import { authClient, useMocks } from '@/lib/auth'
-import { realtime } from '@/lib/ws'
+import { realtimeClient as realtime } from '@/lib/ws'
 import type { LoginRequest, RegisterRequest } from '@/types/api'
 import type { User } from '@/types/models'
 
