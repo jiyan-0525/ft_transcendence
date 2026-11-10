@@ -55,4 +55,29 @@ describe('routes', () => {
       screen.getByRole('heading', { name: /page not found/i }),
     ).toBeInTheDocument()
   })
+
+  it('sets the document title per route', () => {
+    renderAt('/design')
+
+    expect(document.title).toBe('Design system · Social Network')
+  })
+
+  it('sets the 404 title for unknown paths', () => {
+    renderAt('/missing')
+
+    expect(document.title).toBe('Page not found · Social Network')
+  })
+
+  it('links to the legal pages from the footer', () => {
+    renderAt('/')
+
+    expect(screen.getByRole('link', { name: 'Privacy' })).toHaveAttribute(
+      'href',
+      '/legal/privacy',
+    )
+    expect(screen.getByRole('link', { name: 'Terms' })).toHaveAttribute(
+      'href',
+      '/legal/terms',
+    )
+  })
 })

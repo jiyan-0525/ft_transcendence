@@ -1,11 +1,17 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
+import { useDocumentTitle } from '@/lib/documentTitle'
 import Brand from './Brand'
+import Footer from './Footer'
 
 /**
  * Layout for signed-out pages (login, register). It deliberately has no
  * channel navigation: the product area is not reachable until signed in.
  */
 export default function AuthLayout() {
+  const location = useLocation()
+
+  useDocumentTitle(location.pathname)
+
   return (
     <div className="flex min-h-screen flex-col bg-canvas">
       <header className="border-b border-line bg-surface/80 backdrop-blur">
@@ -18,11 +24,7 @@ export default function AuthLayout() {
         <Outlet />
       </main>
 
-      <footer className="border-t border-line bg-surface">
-        <div className="mx-auto w-full max-w-6xl px-4 py-6 text-sm text-ink-muted">
-          Social Network — ft_transcendence
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

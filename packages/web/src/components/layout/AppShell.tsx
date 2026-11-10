@@ -3,7 +3,9 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Avatar, Dropdown } from '@/components/ui'
 import type { DropdownItem } from '@/components/ui'
 import { selectIsAdmin, useAuthStore } from '@/stores/auth'
+import { useDocumentTitle } from '@/lib/documentTitle'
 import Brand from './Brand'
+import Footer from './Footer'
 
 type NavItem = {
   to: string
@@ -86,6 +88,8 @@ export default function AppShell() {
   const isAdmin = useAuthStore(selectIsAdmin)
 
   const isSignedIn = status === 'authenticated'
+
+  useDocumentTitle(location.pathname)
   const accountLinks: NavItem[] = isSignedIn
     ? [...memberLinks, ...(isAdmin ? [adminLink] : [])]
     : guestLinks
@@ -268,11 +272,7 @@ export default function AppShell() {
         <Outlet />
       </main>
 
-      <footer className="border-t border-line bg-surface">
-        <div className="mx-auto w-full max-w-6xl px-4 py-6 text-sm text-ink-muted">
-          Social Network — ft_transcendence
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

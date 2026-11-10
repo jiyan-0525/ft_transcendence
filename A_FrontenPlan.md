@@ -327,6 +327,24 @@ only by tests with a fake socket.
 2. Decide whether to use TanStack Query now or defer it.
 3. Decide whether to gate `/design` to development builds.
 
+### 2026-11-10 — Day 6: A2 leftovers and PR wrap-up
+
+**Goal:** close the two A2 gaps, keep `/design` out of the product navigation,
+and get PR #16 ready for review.
+
+| Step | Result | Evidence |
+|---|---|---|
+| Per-route `document.title` | done | `src/lib/documentTitle.ts`, used by `AppShell` and `AuthLayout` |
+| Footer links to Privacy and Terms | done | `components/layout/Footer.tsx`, shared by both layouts |
+| `/design` nav entry tried and reverted | decided: no nav entry | route stays reachable by URL only |
+| Tests | 26 files / 113 tests pass | `appRoutes.test.tsx`, `documentTitle.test.ts` |
+
+**Decision:** `/design` stays off the header. The gallery is developer evidence
+for Module 11, not a product page; reviewers open it by URL.
+
+**Next:** manual smoke matrix at 375/768/1280, mark PR #16 ready for review,
+request a non-author reviewer, merge.
+
 ---
 
 ## 0. Starting point (verified 2026-11-05)
