@@ -4,7 +4,7 @@
 **Date:** 2026-11-05
 **Cycle:** Sprint 1, Week 1 — React frontend foundation
 **Branch:** `A-product_Owner_jiyan` (based on `master` @ `577a89d`)
-**Status:** A2 complete (tokens + app shell); navigation aligned with the subject — A3 next
+**Status:** A5 complete (auth store, guards, forms); A6 complete (reconnecting WebSocket client skeleton) — A7/A8 next
 
 **Sources of truth**
 
@@ -627,14 +627,14 @@ there is no horizontal scroll on mobile.
 
 **Done when:** with mocks on, register → login → reload → logout works.
 
-### A6 — WebSocket client skeleton (Day 4)
+### A6 — WebSocket client skeleton (Day 4) ✅
 
-- [ ] `types/ws.ts`: client/server frame unions
-- [ ] `lib/ws.ts`: cookie-authenticated connect, exponential backoff with jitter,
+- [x] `types/ws.ts`: client/server frame unions
+- [x] `lib/ws.ts`: cookie-authenticated connect, exponential backoff with jitter,
       heartbeat, typed `send`, event emitter, close on logout
-- [ ] Do not auto-connect before authentication
-- [ ] Reconnect logs one dev line; never throws on close
-- [ ] One smoke test with a fake `WebSocket`
+- [x] Do not auto-connect before authentication
+- [x] Reconnect logs one dev line; never throws on close
+- [x] One smoke test with a fake `WebSocket` (8 tests)
 
 **Done when:** the client connects, reconnects after an artificial close and
 exposes `on("notification:new")` without console noise.

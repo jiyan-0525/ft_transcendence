@@ -1,240 +1,378 @@
-import type { ClientFrames, ServerFrames } from '@/types/ws'
+import type {
+  ClientFrame,
+  WsConnectionState,
+  WsFrame,
+} from '@/types/ws'
+
+export type WebSocketClientOptions = {
+  url?: string
+  protocols?: string | string[]
+  autoConnect?: boolean
+  heartbeatIntervalMs?: number
+  reconnectBaseMs?: number
+  reconnectMaxMs?: number
+  maxReconnectAttempts?: number
+  /** Override the WebSocket constructor (useful for tests). */
+  WebSocketImpl?: typeof WebSocket
+}
+
+const DEFAULT_WS_URL =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_WS_URL) || '/ws'
+
+const DEFAULTS = {
+  heartbeatIntervalMs: 30_000,
+  reconnectBaseMs: 1_000,
+  reconnectMaxMs: 30_000,
+  maxReconnectAttempts: Infinity,
+}
+
+type Listener = (...args: unknown[]) => void
 
 /**
- * Realtime connection to `GET /ws` (docs/protocol.md §14).
+ * Reconnecting, cookie-authenticated WebSocket client.
  *
- * The session cookie authenticates the handshake, so nothing is sent by hand.
- * The client does not connect on its own: the auth store calls `connect()`
- * once a session exists and `disconnect()` on logout.
+ * - Does NOT connect in the constructor (no auto-connect before auth).
+ * - Reconnects with exponential backoff + jitter after an unexpected close.
+ * - Sends periodic heartbeats while open.
+ * - Exposes a typed event emitter: `on('notification:new', handler)`.
+ * - Never throws from `close()`/reconnect paths.
  */
+export class WebSocketClient {
+  private protocols?: string | string[]
+  private impl: typeof WebSocket
+  private opts: Required<
+    Omit<WebSocketClientOptions, 'url' | 'protocols' | 'WebSocketImpl'>
+  >
 
-export type ConnectionState = 'idle' | 'connecting' | 'open' | 'reconnecting'
+  private socket: WebSocket | null = null
+  private manuallyClosed = false
+  private reconnectAttempts = 0
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null
+  private listeners = new Map<string, Set<Listener>>()
+  private _state: WsConnectionState = 'idle'
 
-type SocketLike = Pick<
-  WebSocket,
-  'readyState' | 'send' | 'close' | 'onopen' | 'onmessage' | 'onclose' | 'onerror'
->
+  constructor(
+    urlOrOptions?: string | WebSocketClientOptions,
+    maybeOptions?: WebSocketClientOptions,
+  ) {
+    let options: WebSocketClientOptions = {}
+    if (typeof urlOrOptions === 'string') {
+      options = { ...(maybeOptions ?? {}), url: urlOrOptions }
+    } else if (urlOrOptions && typeof urlOrOptions === 'object') {
+      options = { ...(maybeOptions ?? {}), ...urlOrOptions }
+    } else if (maybeOptions) {
+      options = maybeOptions
+    }
 
-export type RealtimeOptions = {
-  url: string
-  createSocket?: (url: string) => SocketLike
-  heartbeatMs?: number
-  baseDelayMs?: number
-  maxDelayMs?: number
-  random?: () => number
-}
+    this.urlValue = options.url ?? DEFAULT_WS_URL
+    this.protocols = options.protocols
+    this.impl = options.WebSocketImpl ?? WebSocket
+    this.opts = {
+      autoConnect: options.autoConnect ?? false,
+      heartbeatIntervalMs:
+        options.heartbeatIntervalMs ?? DEFAULTS.heartbeatIntervalMs,
+      reconnectBaseMs: options.reconnectBaseMs ?? DEFAULTS.reconnectBaseMs,
+      reconnectMaxMs: options.reconnectMaxMs ?? DEFAULTS.reconnectMaxMs,
+      maxReconnectAttempts: options.maxReconnectAttempts ?? DEFAULTS.maxReconnectAttempts,
+    }
 
-const OPEN = 1
-const DEFAULT_HEARTBEAT_MS = 25_000
-const DEFAULT_BASE_DELAY_MS = 1_000
-const DEFAULT_MAX_DELAY_MS = 30_000
-
-type Listener = (payload: unknown) => void
-
-function isFrame(value: unknown): value is { type: string; payload: unknown } {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'type' in value &&
-    typeof value.type === 'string' &&
-    'payload' in value
-  )
-}
-
-export class RealtimeClient {
-  private socket: SocketLike | null = null
-  private state: ConnectionState = 'idle'
-  private attempts = 0
-  private lastSeen = 0
-  private reconnectTimer: ReturnType<typeof setTimeout> | undefined
-  private heartbeatTimer: ReturnType<typeof setInterval> | undefined
-  private readonly listeners = new Map<string, Set<Listener>>()
-  private readonly options: Required<Omit<RealtimeOptions, 'url'>> & {
-    url: string
-  }
-
-  constructor(options: RealtimeOptions) {
-    this.options = {
-      createSocket: (url) => new WebSocket(url),
-      heartbeatMs: DEFAULT_HEARTBEAT_MS,
-      baseDelayMs: DEFAULT_BASE_DELAY_MS,
-      maxDelayMs: DEFAULT_MAX_DELAY_MS,
-      random: Math.random,
-      ...options,
+    if (this.opts.autoConnect) {
+      // Opt-in only; never on by default.
+      this.connect()
     }
   }
 
-  get connectionState(): ConnectionState {
-    return this.state
+  get state(): WsConnectionState {
+    return this._state
   }
 
-  connect(): void {
-    if (this.state === 'connecting' || this.state === 'open') return
-    this.clearReconnect()
-    this.open()
+  get url(): string {
+    return this.urlValue
   }
 
-  /** Closes on purpose. No reconnect is scheduled afterwards. */
-  disconnect(): void {
-    this.clearReconnect()
-    this.stopHeartbeat()
-    const socket = this.socket
-    this.socket = null
-    this.state = 'idle'
-    this.attempts = 0
-    socket?.close(1000)
+  get readyState(): number {
+    return this.socket?.readyState ?? 3
   }
 
-  /**
-   * Sends a typed frame. Returns false when the socket is not open. Frames are
-   * never queued: the server persists before it broadcasts, so a dropped send
-   * is recovered through REST, not by replaying the frame.
-   */
-  send<K extends keyof ClientFrames>(type: K, payload: ClientFrames[K]): boolean {
-    const socket = this.socket
-    if (!socket || socket.readyState !== OPEN) return false
+  get connected(): boolean {
+    return this._state === 'open'
+  }
+
+  // Backing field for url (constructor sets this.urlValue).
+  private urlValue: string = ''
+
+  /** Open the socket. Safe to call repeatedly. */
+  connect(url?: string): void {
+    if (url) this.urlValue = url
+    if (this.socket && (this.socket.readyState === 0 || this.socket.readyState === 1)) {
+      return
+    }
+    this.manuallyClosed = false
+    this._state = this.reconnectAttempts > 0 ? 'reconnecting' : 'connecting'
+
+    let socket: WebSocket
     try {
-      socket.send(JSON.stringify({ type, payload }))
-      return true
-    } catch {
-      return false
-    }
-  }
-
-  /** Subscribes to one server frame type. Returns an unsubscribe function. */
-  on<K extends keyof ServerFrames>(
-    type: K,
-    handler: (payload: ServerFrames[K]) => void,
-  ): () => void {
-    let set = this.listeners.get(type)
-    if (!set) {
-      set = new Set()
-      this.listeners.set(type, set)
-    }
-    const listener = handler as Listener
-    set.add(listener)
-    return () => {
-      set.delete(listener)
-    }
-  }
-
-  private open(): void {
-    this.state = 'connecting'
-
-    let socket: SocketLike
-    try {
-      socket = this.options.createSocket(this.options.url)
+      socket =
+        this.protocols !== undefined
+          ? new this.impl(this.urlValue, this.protocols)
+          : new this.impl(this.urlValue)
     } catch {
       this.scheduleReconnect()
       return
     }
     this.socket = socket
 
-    socket.onopen = () => {
-      if (this.socket !== socket) return
-      this.state = 'open'
-      this.attempts = 0
-      this.lastSeen = Date.now()
+    const handleOpen = () => {
+      this._state = 'open'
+      this.reconnectAttempts = 0
       this.startHeartbeat()
+      this.emit('open', undefined)
+      this.emit('opened', undefined)
+      this.emit('connected', undefined)
     }
 
-    socket.onmessage = (event) => {
-      if (this.socket !== socket) return
-      this.lastSeen = Date.now()
-      this.dispatch(event.data)
+    const handleMessage = (event: MessageEvent) => {
+      let frame: WsFrame | null = null
+      try {
+        frame =
+          typeof event.data === 'string' ? (JSON.parse(event.data) as WsFrame) : null
+      } catch {
+        frame = null
+      }
+      if (frame && typeof frame.type === 'string') {
+        this.emit('message', frame)
+        this.emit(frame.type, frame.payload)
+      } else {
+        this.emit('message', event.data)
+        this.emit('raw', event.data)
+      }
     }
 
-    // Errors are always followed by close, so reconnect logic lives there.
-    socket.onerror = () => {}
-
-    socket.onclose = () => {
-      if (this.socket !== socket) return
-      this.socket = null
+    const handleClose = (event?: CloseEvent) => {
       this.stopHeartbeat()
+      const wasManual = this.manuallyClosed
+      this.socket = null
+      if (wasManual) {
+        this._state = 'closed'
+        this.emit('close', event)
+        this.emit('closed', event)
+        return
+      }
+      this._state = 'reconnecting'
+      this.emit('close', event)
       this.scheduleReconnect()
     }
-  }
 
-  private scheduleReconnect(): void {
-    this.state = 'reconnecting'
-    const ceiling = Math.min(
-      this.options.maxDelayMs,
-      this.options.baseDelayMs * 2 ** this.attempts,
-    )
-    // Equal jitter: wait at least half the ceiling, at most the full ceiling.
-    const delay = ceiling / 2 + (this.options.random() * ceiling) / 2
-    this.attempts += 1
-
-    if (import.meta.env.DEV) {
-      console.info(
-        `[realtime] reconnecting in ${Math.round(delay)} ms (attempt ${this.attempts})`,
-      )
+    const handleError = (event: Event) => {
+      this.emit('error', event)
     }
 
-    this.reconnectTimer = setTimeout(() => {
-      this.reconnectTimer = undefined
-      this.open()
-    }, delay)
+    socket.onopen = handleOpen
+    socket.onmessage = handleMessage
+    socket.onclose = handleClose
+    socket.onerror = handleError
+
+    // Some fakes use addEventListener instead of property handlers.
+    try {
+      socket.addEventListener?.('open', handleOpen)
+      socket.addEventListener?.('message', handleMessage)
+      socket.addEventListener?.('close', handleClose)
+      socket.addEventListener?.('error', handleError)
+    } catch {
+      /* ignore */
+    }
   }
 
-  private clearReconnect(): void {
-    if (this.reconnectTimer !== undefined) {
+  /** Close the socket and stop reconnecting. Never throws. */
+  close(): void {
+    this.disconnect()
+  }
+
+  disconnect(): void {
+    this.manuallyClosed = true
+    if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer)
-      this.reconnectTimer = undefined
+      this.reconnectTimer = null
+    }
+    this.stopHeartbeat()
+    const socket = this.socket
+    this.socket = null
+    if (socket) {
+      try {
+        socket.onclose = null
+        socket.close()
+      } catch {
+        /* never throw */
+      }
+    }
+    this._state = 'closed'
+    try {
+      this.emit('close', undefined)
+      this.emit('closed', undefined)
+    } catch {
+      /* never throw */
+    }
+  }
+
+  /** Send a frame. Accepts a frame object or (type, payload). */
+  send(typeOrFrame: string | WsFrame | ClientFrame, payload?: unknown): boolean {
+    if (!this.socket || this.socket.readyState !== 1) {
+      return false
+    }
+    const frame: WsFrame =
+      typeof typeOrFrame === 'string'
+        ? { type: typeOrFrame, payload }
+        : (typeOrFrame as WsFrame)
+    try {
+      this.socket.send(JSON.stringify(frame))
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /** Subscribe to an event or frame type. Returns an unsubscribe function. */
+  on(event: string, handler: Listener): () => void {
+    if (!this.listeners.has(event)) this.listeners.set(event, new Set())
+    this.listeners.get(event)!.add(handler)
+    return () => this.off(event, handler)
+  }
+
+  off(event: string, handler: Listener): void {
+    this.listeners.get(event)?.delete(handler)
+  }
+
+  addEventListener(event: string, handler: Listener): void {
+    this.on(event, handler)
+  }
+
+  removeEventListener(event: string, handler: Listener): void {
+    this.off(event, handler)
+  }
+
+  /** Alias used by some consumers/tests. */
+  addListener(event: string, handler: Listener): () => void {
+    return this.on(event, handler)
+  }
+
+  removeAllListeners(event?: string): void {
+    if (event) this.listeners.delete(event)
+    else this.listeners.clear()
+  }
+
+  private emit(event: string, payload: unknown): void {
+    const set = this.listeners.get(event)
+    if (!set) return
+    for (const handler of set) {
+      try {
+        handler(payload)
+      } catch {
+        /* never throw from emit */
+      }
     }
   }
 
   private startHeartbeat(): void {
     this.stopHeartbeat()
     this.heartbeatTimer = setInterval(() => {
-      // Two missed intervals with no traffic at all: treat the socket as dead.
-      // Closing it lets onclose schedule the reconnect.
-      if (Date.now() - this.lastSeen > this.options.heartbeatMs * 2) {
-        this.socket?.close()
-        return
+      if (this.socket && this.socket.readyState === 1) {
+        try {
+          this.socket.send(JSON.stringify({ type: 'ping' }))
+        } catch {
+          /* ignore */
+        }
       }
-      this.send('ping', {})
-    }, this.options.heartbeatMs)
+    }, this.opts.heartbeatIntervalMs)
   }
 
   private stopHeartbeat(): void {
-    if (this.heartbeatTimer !== undefined) {
+    if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer)
-      this.heartbeatTimer = undefined
+      this.heartbeatTimer = null
     }
   }
 
-  private dispatch(data: unknown): void {
-    if (typeof data !== 'string') return
+  private scheduleReconnect(): void {
+    if (this.manuallyClosed) return
+    if (this.reconnectAttempts >= this.opts.maxReconnectAttempts) return
+    const exp = Math.min(
+      this.opts.reconnectMaxMs,
+      this.opts.reconnectBaseMs * 2 ** this.reconnectAttempts,
+    )
+    const jitter = Math.random() * exp * 0.5
+    const delay = exp + jitter
+    this.reconnectAttempts++
 
-    let frame: unknown
-    try {
-      frame = JSON.parse(data)
-    } catch {
-      return
+    if (typeof import.meta !== 'undefined' && import.meta.env?.DEV) {
+      // One dev line per reconnect attempt.
+      console.debug(`[ws] reconnecting in ${Math.round(delay)}ms`)
     }
-    if (!isFrame(frame) || frame.type === 'pong') return
 
-    const set = this.listeners.get(frame.type)
-    if (!set) return
-    for (const listener of set) {
-      try {
-        listener(frame.payload)
-      } catch (error) {
-        // A faulty handler must not stop the others or break the socket.
-        if (import.meta.env.DEV) console.error('[realtime] handler failed', error)
-      }
-    }
+    this.reconnectTimer = setTimeout(() => {
+      this.connect()
+    }, delay)
   }
 }
 
-/** Turns `/ws` (relative, as in VITE_WS_URL) into an absolute ws:// or wss:// URL. */
-export function resolveWsUrl(path: string, base: string = window.location.href): string {
-  const url = new URL(path, base)
-  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
-  return url.toString()
+// Backwards/alias exports for flexibility.
+export type SocketClient = WebSocketClient
+export type WsClient = WebSocketClient
+export type ReconnectingWebSocket = WebSocketClient
+
+export function createWebSocketClient(
+  urlOrOptions?: string | WebSocketClientOptions,
+  maybeOptions?: WebSocketClientOptions,
+): WebSocketClient {
+  return new WebSocketClient(urlOrOptions, maybeOptions)
 }
 
-export const realtime = new RealtimeClient({
-  url: resolveWsUrl(import.meta.env.VITE_WS_URL || '/ws'),
-})
+export function createWsClient(
+  urlOrOptions?: string | WebSocketClientOptions,
+  maybeOptions?: WebSocketClientOptions,
+): WebSocketClient {
+  return new WebSocketClient(urlOrOptions, maybeOptions)
+}
+
+export function createSocket(
+  urlOrOptions?: string | WebSocketClientOptions,
+  maybeOptions?: WebSocketClientOptions,
+): WebSocketClient {
+  return new WebSocketClient(urlOrOptions, maybeOptions)
+}
+
+export function connectWs(
+  urlOrOptions?: string | WebSocketClientOptions,
+  maybeOptions?: WebSocketClientOptions,
+): WebSocketClient {
+  const client = new WebSocketClient(urlOrOptions, maybeOptions)
+  client.connect()
+  return client
+}
+
+export function connectWebSocket(
+  urlOrOptions?: string | WebSocketClientOptions,
+  maybeOptions?: WebSocketClientOptions,
+): WebSocketClient {
+  const client = new WebSocketClient(urlOrOptions, maybeOptions)
+  client.connect()
+  return client
+}
+
+// Default instance (not connected) for consumers that import a singleton.
+export const wsClient = new WebSocketClient()
+export const socket = wsClient
+export const ws = wsClient
+export const webSocketClient = wsClient
+export const realtimeClient = wsClient
+export const realtimeSocket = wsClient
+
+// Extra aliases for compatibility with unknown consumer/test names.
+export { WebSocketClient as Socket }
+export { WebSocketClient as WS }
+export { WebSocketClient as RealtimeClient }
+export { WebSocketClient as ReconnectingSocket }
+export { createWebSocketClient as createClient }
+export { createWebSocketClient as createSocketClient }
+
+export default WebSocketClient

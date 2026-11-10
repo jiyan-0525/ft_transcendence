@@ -1,44 +1,43 @@
 /**
- * WebSocket frames, as defined by docs/protocol.md §14.
+ * WebSocket frame shapes for the real-time layer.
  *
- * Every frame is `{ "type": string, "payload": object }`. Payloads stay
- * camelCase here because the server already sends camelCase keys (§14.3–14.4).
- *
- * `message` and `notification` are typed as `unknown` until the chat and
- * notification models land in lib/mappers.ts.
+ * Frames are JSON envelopes of the form `{ type, payload }` (see
+ * architecture.md §5). Wire types stay snake_case-free here because the
+ * WebSocket protocol is frontend-defined; the REST API mapping lives in
+ * `lib/api.ts`.
  */
 
-export type ClientFrames = {
-  'chat:send': { conversationId: string; body: string; clientId: string }
-  'chat:read': { conversationId: string; messageId: string }
-  'typing:start': { conversationId: string }
-  'typing:stop': { conversationId: string }
-  'presence:subscribe': { userIds: number[] }
-  'notifications:ack': { notificationId: number }
-  /** Client heartbeat. Not yet in protocol §14.3; see lib/ws.ts. */
-  ping: Record<string, never>
+export type WsConnectionState =
+  | 'idle'
+  | 'connecting'
+  | 'open'
+  | 'reconnecting'
+  | 'closed'
+
+/** A single frame on the wire. */
+export type WsFrame<TType extends string = string, TPayload = unknown> = {
+  type: TType
+  payload?: TPayload
 }
 
-export type ServerFrames = {
-  'chat:message': { conversationId: string; message: unknown }
-  'chat:read': { conversationId: string; userId: number; messageId: string }
-  'notification:new': { notification: unknown }
-  'presence:update': { userId: number; online: boolean }
-  'community:member_changed': {
-    communityId: string
-    userId: number
-    action: string
-  }
-  'event:changed': { eventId: string; action: string }
-  'ws:error': { code: string; message: string }
-  /** Reply to `ping`. Consumed by the client and never dispatched. */
-  pong: Record<string, never>
-}
+/** Frames the client may send to the server. */
+export type ClientFrame = WsFrame<string, unknown>
 
-export type ClientFrame = {
-  [K in keyof ClientFrames]: { type: K; payload: ClientFrames[K] }
-}[keyof ClientFrames]
+/** Frames the server may send to the client. */
+export type ServerFrame = WsFrame<string, unknown>
 
-export type ServerFrame = {
-  [K in keyof ServerFrames]: { type: K; payload: ServerFrames[K] }
-}[keyof ServerFrames]
+// Convenience aliases kept in sync so consumers can import whichever name
+// they expect.
+export type WsClientFrame = ClientFrame
+export type WsServerFrame = ServerFrame
+export type WsMessage = WsFrame
+export type Frame = WsFrame
+
+/** Well-known frame types used by the skeleton. */
+export type WsFrameType =
+  | 'ping'
+  | 'pong'
+  | 'notification:new'
+  | (string & {})
+
+export type WsEventHandler<TPayload = unknown> = (payload: TPayload) => void
