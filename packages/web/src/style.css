@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Design tokens — layer 1 of 2: the raw values.
+     Colors are stored as space-separated RGB channels so Tailwind can append
+     an opacity: `bg-brand/80` -> rgb(109 74 255 / 0.8). */
+  :root {
+    /* Surfaces */
+    --color-canvas: 246 245 255; /* soft lavender page background */
+    --color-surface: 255 255 255; /* cards, header, footer */
+    --color-surface-muted: 240 238 255; /* subtle lavender fills */
+
+    /* Lines & text */
+    --color-line: 228 224 245; /* lavender-grey borders */
+    --color-ink: 22 19 43; /* near-black indigo text */
+    --color-ink-muted: 91 87 118; /* secondary text */
+
+    /* Brand & status */
+    --color-brand: 109 74 255; /* electric violet */
+    --color-brand-strong: 90 54 240; /* hover / pressed */
+    --color-accent: 255 77 141; /* pink highlight */
+    --color-accent-2: 0 194 168; /* mint / online status */
+    --color-success: 18 183 106;
+    --color-warning: 247 144 9;
+    --color-danger: 240 68 56;
+
+    /* Shape */
+    --radius-sm: 0.5rem;
+    --radius-md: 0.875rem;
+    --radius-lg: 1.375rem;
+
+    /* Elevation */
+    --shadow-soft: 0 1px 2px rgb(22 19 43 / 0.06),
+      0 12px 32px -12px rgb(109 74 255 / 0.25);
+    --shadow-card: 0 1px 2px rgb(22 19 43 / 0.05),
+      0 18px 40px -20px rgb(22 19 43 / 0.18);
+
+    /* Aurora gradient (deep enough for white text). */
+    --gradient-brand: linear-gradient(
+      135deg,
+      #4c1fd6 0%,
+      #7c3aed 50%,
+      #c026d3 100%
+    );
+  }
+
+  html {
+    @apply antialiased;
+  }
+
+  body {
+    @apply bg-canvas font-sans text-ink;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
+
+  /* One visible focus style for the whole app, so keyboard users can always
+     see where they are. Components inherit this instead of re-inventing it. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand ring-offset-2 ring-offset-canvas;
+  }
+}

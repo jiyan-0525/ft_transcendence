@@ -17,13 +17,13 @@ The planned experience includes:
 - Events and participation.
 - Marketplace listings and seller contact.
 
-The project is under active development. The current backend foundation includes a health endpoint, database models and migrations for users and sessions, password hashing, validation schemas and backend CI. The user-facing features listed above are planned; they are not yet available as a complete application.
+The project is under active development. The current backend foundation includes a health endpoint, database models and migrations for users and sessions, password hashing, validation schemas and backend CI. A React + TypeScript frontend scaffold and its CI job also exist. The user-facing features listed above are planned; they are not yet available as a complete application.
 
 ## Technical choices
 
 | Layer | Technology |
 |---|---|
-| Frontend (planned) | React and TypeScript |
+| Frontend | React 19, TypeScript and Vite (foundation scaffolded) |
 | Backend | Python and FastAPI |
 | Database | PostgreSQL |
 | ORM and migrations | SQLAlchemy and Alembic |
@@ -33,7 +33,7 @@ The project is under active development. The current backend foundation includes
 
 ## Instructions
 
-These instructions run the current backend locally. A complete frontend and production deployment are still under development.
+These instructions run the current backend locally. The React application shell exists; application routes and production deployment are still under development.
 
 ### Prerequisites
 
@@ -92,6 +92,34 @@ This checks database connectivity and model/migration consistency, then runs the
 | `make dev` | Start the backend development server |
 | `make test` | Run backend checks and tests |
 | `make logs` | Follow database logs |
+
+### Frontend
+
+The React + TypeScript app lives in `packages/web` and requires Node 22.
+
+```bash
+cd packages/web
+npm install
+npm run dev
+```
+
+The Vite dev server runs on [http://localhost:5173](http://localhost:5173) and
+proxies `/api` and `/ws` to `http://127.0.0.1:8000`. Start FastAPI with
+`make dev` for live requests. While the auth routes are still being built, set
+`VITE_USE_MOCKS=true` in `packages/web/.env.local`.
+
+The frontend includes a reconnecting WebSocket client skeleton in
+`packages/web/src/lib/ws.ts` (typed frames, heartbeat, exponential backoff with
+jitter, close on logout). It does not connect until the user is authenticated.
+
+| Command | Purpose |
+|---|---|
+| `make web-install` | Install frontend dependencies |
+| `make web-dev` | Start the Vite dev server |
+| `make web-lint` | Lint the frontend |
+| `make web-typecheck` | Type-check the frontend |
+| `make web-test` | Run frontend tests |
+| `make web-build` | Build the frontend |
 
 ## Project documentation
 

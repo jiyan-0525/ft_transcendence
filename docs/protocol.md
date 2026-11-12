@@ -1,11 +1,13 @@
 # Client–Server Protocol (Draft v0.2)
 
-**Status:** draft — Week 1 contract. Only `GET /api/health` is implemented today;
-the rest is the agreed target for Weeks 2–5. Change this document before changing
-the Go handlers or the Vue client.
+**Status:** draft — Week 1 contract. Only `GET /api/health`, the database models
+and the registration schemas are implemented today; the rest is the agreed target
+for Weeks 2–5. Change this document before changing the FastAPI routes or the
+React client.
 
-**Stack:** Vue 3 + TypeScript frontend; Go + Echo backend; PostgreSQL; native JSON
-WebSocket.
+**Stack:** React 19 + TypeScript frontend (React Router 7, Zustand 5, TanStack
+Query 5); Python 3.12 + FastAPI backend; PostgreSQL with SQLAlchemy 2.0 and
+Alembic; native JSON WebSocket.
 
 ---
 
@@ -38,6 +40,8 @@ derives identity from the session.
 
 ### 2.3 Errors
 
+The target envelope is:
+
 ```json
 {
   "error": {
@@ -50,6 +54,12 @@ derives identity from the session.
 
 Stable codes: `INVALID_PAYLOAD`, `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`,
 `CONFLICT`, `RATE_LIMITED`, `INTERNAL`.
+
+FastAPI raises `{"detail": ...}` by default, and Pydantic validation errors use a
+`detail` array. Those are framework shapes, not this contract. The API must map
+them to the envelope above before clients depend on the error shape; until then
+the React client normalises both forms in one place (`lib/api.ts`) and exposes a
+single `ApiError` type.
 
 ### 2.4 Pagination
 
@@ -102,8 +112,26 @@ belongs on the status endpoint added in a later week.
 | `POST` | `/api/auth/oauth/:provider/link` | Link a provider to an existing account |
 | `DELETE` | `/api/auth/oauth/:provider` | Unlink a provider |
 
-Passwords are hashed with argon2id or bcrypt. Raw passwords are never logged,
-stored or returned.
+Passwords are hashed with Argon2id (`argon2-cffi`, `Type.ID`). Raw passwords are
+never logged, stored or returned. The registration contract already implemented in
+`packages/server/app/schemas.py` is:
+
+- `email`: valid address, at most 254 characters, normalised to lowercase.
+- `username`: 3–50 characters, `^[A-Za-z0-9_]+$`, unique.
+- `password`: 15–128 characters, sent as a secret and stored only as an Argon2id
+  hash.
+
+`UserResponse` uses snake_case: `id`, `email`, `username`, `role`, `is_active`,
+`created_at`.
+
+Status codes agreed with the frontend (details in `docs/handoff/auth-frontend.md`):
+
+- `register` → `201` with `UserResponse`. Registration does **not** sign the user
+  in and sets no cookie. Duplicate email or username → `409 CONFLICT`.
+- `login` → `200` with `UserResponse` and the session cookie. Wrong credentials →
+  `401 UNAUTHENTICATED`. The login form checks only that the password is present.
+- `logout` → `204` and the cookie is cleared.
+- `me` → `200` with `UserResponse`, or `401 UNAUTHENTICATED` without a valid session.
 
 ---
 
