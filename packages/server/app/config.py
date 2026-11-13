@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import SecretStr
+from pydantic import Field, SecretStr
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
 
@@ -17,5 +17,7 @@ class Settings(BaseSettings):
     app_name: str = "community-api" 
     app_env: Literal["development", "test", "production"] = "development"
     database_url: SecretStr
+    auth_session_hours: int = Field(default=24, gt=0)
+    auth_allowed_origin: str | None = None
 
 settings = Settings()

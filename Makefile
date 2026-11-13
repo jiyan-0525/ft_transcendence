@@ -50,8 +50,8 @@ dev: ## Run FastAPI locally; Ctrl-C stops it (DB must be ready)
 web-install: ## Install frontend dependencies
 	@cd $(WEB) && npm install
 
-web-dev: ## Run the Vite dev server on :5173
-	@cd $(WEB) && npm run dev
+web-dev: ## Start the frontend with the real API
+	@cd $(WEB) && VITE_USE_MOCKS=false npm run dev
 
 web-lint: ## Lint the frontend
 	@cd $(WEB) && npm run lint
@@ -59,8 +59,8 @@ web-lint: ## Lint the frontend
 web-typecheck: ## Type-check the frontend
 	@cd $(WEB) && npm run typecheck
 
-web-test: ## Run frontend tests
-	@cd $(WEB) && npm run test
+web-test: ## Run frontend tests with mock auth
+	@cd $(WEB) && VITE_USE_MOCKS=true npm run test
 
 web-build: ## Build the frontend
 	@cd $(WEB) && npm run build

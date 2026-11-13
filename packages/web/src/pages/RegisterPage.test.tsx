@@ -19,7 +19,7 @@ function renderRegister() {
 
 async function fillValidForm(
   { email = 'ada@example.com', username = 'ada_lovelace' } = {},
-  password = 'correct horse battery',
+  password = 'Example1!',
 ) {
   await userEvent.type(screen.getByLabelText('Email'), email)
   await userEvent.type(screen.getByLabelText('Username'), username)
@@ -45,15 +45,25 @@ describe('RegisterPage', () => {
     expect(screen.queryByLabelText('Display name')).not.toBeInTheDocument()
   })
 
-  it('requires a password of at least 15 characters', async () => {
+  it('requires a password of at least 8 characters', async () => {
     renderRegister()
 
-    await userEvent.type(screen.getByLabelText('Password'), 'fourteenchars1')
+    await userEvent.type(screen.getByLabelText('Password'), 'Aa1!aaa')
     await userEvent.click(
       screen.getByRole('button', { name: 'Create account' }),
     )
 
-    expect(screen.getByText('Use at least 15 characters.')).toBeInTheDocument()
+    expect(screen.getByText('Use at least 8 characters.')).toBeInTheDocument()
+  })
+
+  it('explains the composition rule when a password has no symbol', async () => {
+    renderRegister()
+    await fillValidForm({}, 'Example1')
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }))
+
+    expect(
+      screen.getByText('Use an uppercase letter, a lowercase letter, a number and a special character.'),
+    ).toBeInTheDocument()
   })
 
   it('rejects usernames with characters the server does not allow', async () => {
@@ -74,11 +84,11 @@ describe('RegisterPage', () => {
 
     await userEvent.type(
       screen.getByLabelText('Password'),
-      'correct horse battery',
+      'Example1!',
     )
     await userEvent.type(
       screen.getByLabelText('Confirm password'),
-      'correct horse batteru',
+      'Example2!',
     )
     await userEvent.click(
       screen.getByRole('button', { name: 'Create account' }),
@@ -104,7 +114,7 @@ describe('RegisterPage', () => {
   it('creates the account and sends the user to login without signing in', async () => {
     renderRegister()
 
-    await fillValidForm({}, 'fifteenchars123')
+    await fillValidForm({}, 'Aa1!aaaa')
     await userEvent.click(
       screen.getByRole('button', { name: 'Create account' }),
     )
@@ -117,7 +127,7 @@ describe('RegisterPage', () => {
     await mockRegister({
       email: 'ada@example.com',
       username: 'someone_else',
-      password: 'correct horse battery',
+      password: 'Example1!',
     })
     renderRegister()
 

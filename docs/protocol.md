@@ -118,7 +118,8 @@ never logged, stored or returned. The registration contract already implemented 
 
 - `email`: valid address, at most 254 characters, normalised to lowercase.
 - `username`: 3–50 characters, `^[A-Za-z0-9_]+$`, unique.
-- `password`: 15–128 characters, sent as a secret and stored only as an Argon2id
+- `password`: 8–128 characters, with at least one ASCII uppercase letter, lowercase letter,
+  digit and punctuation character. Sent as a secret and stored only as an Argon2id
   hash.
 
 `UserResponse` uses snake_case: `id`, `email`, `username`, `role`, `is_active`,

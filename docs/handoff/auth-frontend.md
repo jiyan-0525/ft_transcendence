@@ -24,12 +24,12 @@ All bodies are JSON with snake_case keys, matching `packages/server/app/schemas.
 ### `POST /api/auth/register`
 
 ```json
-{ "email": "ada@example.com", "username": "ada_lovelace", "password": "at-least-15-chars" }
+{ "email": "ada@example.com", "username": "ada_lovelace", "password": "Example1!" }
 ```
 
 - `email`: valid address, at most 254 characters, stored lowercase.
 - `username`: 3–50 characters, `^[A-Za-z0-9_]+$`, unique.
-- `password`: 15–128 characters.
+- `password`: 8–128 characters, with at least one ASCII uppercase letter, lowercase letter, digit and punctuation character.
 - The frontend sends **only these three fields**. The server uses
   `extra="forbid"`, so any other field returns `422`.
 
@@ -45,7 +45,7 @@ response is `201` with the user, and no session cookie is set (protocol D10).
 ### `POST /api/auth/login`
 
 ```json
-{ "email": "ada@example.com", "password": "at-least-15-chars" }
+{ "email": "ada@example.com", "password": "Example1!" }
 ```
 
 | Status | When | Body |

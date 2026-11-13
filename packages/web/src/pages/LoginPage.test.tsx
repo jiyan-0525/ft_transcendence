@@ -9,7 +9,7 @@ import LoginPage from './LoginPage'
 const account = {
   email: 'ada@example.com',
   username: 'ada_lovelace',
-  password: 'correct horse battery',
+  password: 'Example1!',
 }
 
 function renderLogin() {

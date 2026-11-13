@@ -4,7 +4,7 @@ import { login, logout, me, register, resetMockAuth } from './auth'
 const account = {
   email: 'Ada@Example.com',
   username: 'ada_lovelace',
-  password: 'correct horse battery',
+  password: 'Example1!',
 }
 
 beforeEach(() => {
