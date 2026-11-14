@@ -5,7 +5,7 @@ import { useAuthStore } from './auth'
 const account = {
   email: 'ada@example.com',
   username: 'ada_lovelace',
-  password: 'correct horse battery',
+  password: 'Example1!',
 }
 
 beforeEach(() => {

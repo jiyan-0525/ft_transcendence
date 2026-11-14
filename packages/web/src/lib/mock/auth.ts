@@ -1,4 +1,5 @@
 import { ApiError } from '@/lib/api'
+import { validatePassword } from '@/lib/validation'
 import type {
   LoginRequest,
   RegisterRequest,
@@ -54,6 +55,11 @@ export function resetMockAuth(): void {
 resetMockAuth()
 
 export async function register(input: RegisterRequest): Promise<UserResponse> {
+  const passwordError = validatePassword(input.password)
+  if (passwordError) {
+    throw new ApiError({ code: 'INVALID_PAYLOAD', message: passwordError, status: 422 })
+  }
+
   const email = input.email.toLowerCase()
 
   if (users.some((user) => user.email === email)) {

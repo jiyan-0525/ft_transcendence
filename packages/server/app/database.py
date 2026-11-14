@@ -26,4 +26,8 @@ SessionLocal = sessionmaker(
 # serve a database session to each API endpoint
 def get_db() -> Iterator[Session]:
     with SessionLocal() as db:
-        yield db
+        try:
+            yield db
+        except Exception:
+            db.rollback()
+            raise

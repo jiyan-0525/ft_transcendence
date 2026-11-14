@@ -4,7 +4,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Alert, Button, Card, Input } from '@/components/ui'
 import { ApiError } from '@/lib/api'
 import {
-  MIN_PASSWORD_LENGTH,
   validateEmail,
   validatePassword,
   validateUsername,
@@ -181,7 +180,7 @@ export default function RegisterPage() {
           autoComplete="new-password"
           value={values.password}
           onChange={handleChange('password')}
-          hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}
+          hint="Use 8–128 characters with uppercase, lowercase, a number and a special character."
           error={errors.password}
         />
 

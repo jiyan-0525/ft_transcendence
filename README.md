@@ -17,13 +17,13 @@ The planned experience includes:
 - Events and participation.
 - Marketplace listings and seller contact.
 
-The project is under active development. The current backend foundation includes a health endpoint, database models and migrations for users and sessions, password hashing, validation schemas and backend CI. A React + TypeScript frontend scaffold and its CI job also exist. The user-facing features listed above are planned; they are not yet available as a complete application.
+The Week 1 baseline implements account registration, session-based login and logout, and a minimal authenticated text feed. The remaining capabilities are tracked in [Product V1](docs/product-v1.md).
 
 ## Technical choices
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 19, TypeScript and Vite (foundation scaffolded) |
+| Frontend | React 19, TypeScript and Vite |
 | Backend | Python and FastAPI |
 | Database | PostgreSQL |
 | ORM and migrations | SQLAlchemy and Alembic |
@@ -33,14 +33,14 @@ The project is under active development. The current backend foundation includes
 
 ## Instructions
 
-These instructions run the current backend locally. The React application shell exists; application routes and production deployment are still under development.
+Run the frontend and API locally against PostgreSQL, or use the local HTTPS stack.
 
 ### Prerequisites
 
-- Git and Make.
+- Git, Make and Node.js 22.
 - Python 3.12, including `venv` and `pip`.
 - Docker with Docker Compose.
-- Available local ports `5432` (database) and `8000` (API).
+- Available local ports `5432` (database) and `8000` (API), plus `5173` (Vite) or `8443` (HTTPS).
 
 The commands below assume a macOS or Linux shell and must be run from the repository root.
 
@@ -67,9 +67,10 @@ make dev
 These commands start PostgreSQL, apply the database migrations and run FastAPI with automatic reload.
 
 - Health endpoint: [http://127.0.0.1:8000/api/health](http://127.0.0.1:8000/api/health)
+- Database readiness: `GET /api/status`
 - Interactive API documentation: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
-Use `make dev PORT=8001` to select a different API port. Press `Ctrl-C` to stop the API and run `make down` to stop the database. Database data is retained between restarts.
+Keep port 8000 for the default Vite proxy. Press `Ctrl-C` to stop the API and run `make down` to stop the database. Database data is retained between restarts.
 
 ### Tests and useful commands
 
@@ -93,33 +94,11 @@ This checks database connectivity and model/migration consistency, then runs the
 | `make test` | Run backend checks and tests |
 | `make logs` | Follow database logs |
 
-### Frontend
+### Frontend and local HTTPS
 
-The React + TypeScript app lives in `packages/web` and requires Node 22.
+Run `make web-install` once. In a separate terminal from `make dev`, run `make web-dev` and open [http://localhost:5173](http://localhost:5173). The development target uses the real API. Run `make web-test` for frontend tests using mock authentication.
 
-```bash
-cd packages/web
-npm install
-npm run dev
-```
-
-The Vite dev server runs on [http://localhost:5173](http://localhost:5173) and
-proxies `/api` and `/ws` to `http://127.0.0.1:8000`. Start FastAPI with
-`make dev` for live requests. While the auth routes are still being built, set
-`VITE_USE_MOCKS=true` in `packages/web/.env.local`.
-
-The frontend includes a reconnecting WebSocket client skeleton in
-`packages/web/src/lib/ws.ts` (typed frames, heartbeat, exponential backoff with
-jitter, close on logout). It does not connect until the user is authenticated.
-
-| Command | Purpose |
-|---|---|
-| `make web-install` | Install frontend dependencies |
-| `make web-dev` | Start the Vite dev server |
-| `make web-lint` | Lint the frontend |
-| `make web-typecheck` | Type-check the frontend |
-| `make web-test` | Run frontend tests |
-| `make web-build` | Build the frontend |
+For the local HTTPS stack, configure `CONTAINER_DATABASE_URL` in root `.env` and run `make stack-up`. Open [https://localhost:8443](https://localhost:8443). See the [backend handoff](docs/handoff/week-1-backend.md) for the container database URL and local certificate setup. Run `make stack-down` to stop the stack while preserving database data.
 
 ## Project documentation
 
@@ -132,6 +111,8 @@ The design documents describe the intended product and distinguish implemented f
 | [Data model](docs/data-model.md) | Existing schema, proposed models and entity relationships |
 
 Backend code, tests and migrations are in `packages/server/`. The frontend directory is `packages/web/`. CI configuration is in `.github/workflows/`.
+
+See also [Architecture](docs/architecture.md), [API protocol](docs/protocol.md) and the [Week 1 handoff](docs/handoff/week-1-backend.md).
 
 ## Resources
 

@@ -5,8 +5,8 @@
  * of truth; the client only catches obvious mistakes before a request is sent.
  */
 
-/** Matches `RegisterRequest.password` in schemas.py (min_length=15). */
-export const MIN_PASSWORD_LENGTH = 15
+/** Matches `RegisterRequest.password` in schemas.py (min_length=8). */
+export const MIN_PASSWORD_LENGTH = 8
 /** Matches `RegisterRequest.password` (max_length=128). */
 export const MAX_PASSWORD_LENGTH = 128
 /** Matches `Username` in schemas.py. */
@@ -56,11 +56,21 @@ export function validateUsername(value: string): string | undefined {
 
 export function validatePassword(value: string): string | undefined {
   if (!value) return 'Enter your password.'
-  if (value.length < MIN_PASSWORD_LENGTH) {
+  const length = Array.from(value).length
+  if (length < MIN_PASSWORD_LENGTH) {
     return `Use at least ${MIN_PASSWORD_LENGTH} characters.`
   }
-  if (value.length > MAX_PASSWORD_LENGTH) {
+  if (length > MAX_PASSWORD_LENGTH) {
     return `Use at most ${MAX_PASSWORD_LENGTH} characters.`
+  }
+
+  if (
+    !/[A-Z]/.test(value) ||
+    !/[a-z]/.test(value) ||
+    !/[0-9]/.test(value) ||
+    !/[\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e]/.test(value)
+  ) {
+    return 'Use an uppercase letter, a lowercase letter, a number and a special character.'
   }
 
   return undefined

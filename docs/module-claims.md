@@ -42,7 +42,7 @@ standing in for the other:
 
 ---
 
-## 1. Web — Major: frontend and backend frameworks (2 pts) · Lead A + B · 🔄 scaffold
+## 1. Web — Major: frontend and backend frameworks (2 pts) · Lead A + B · 🔄 implemented foundation
 
 **Claim.** React 19 + TypeScript + Vite (frontend), React Router 7 + Zustand 5 +
 TanStack Query 5 (routing and state), and Python 3.12 + FastAPI (backend), with
@@ -114,7 +114,7 @@ one-to-one direct messages.
 
 ---
 
-## 4. User — Major: standard user management (2 pts) · Lead A + B · ⬜
+## 4. User — Major: standard user management (2 pts) · Lead A + B · 🔄
 
 **Claim.** Email/password registration and login with Argon2id hashing, editable
 profile, avatar upload with a default, friends list and live online status.
@@ -127,13 +127,9 @@ profile, avatar upload with a default, friends list and live online status.
 4. Send and accept a friend request; both lists update.
 5. Sign out and confirm protected routes redirect to sign-in.
 
-**Evidence:** `packages/server/app/schemas.py` and `app/security.py` define the
-registration contract and Argon2id hashing. Routes and UI are planned:
-`packages/server/app/routers/auth.py`, `packages/web/src/pages/auth/RegisterPage.tsx`,
-`LoginPage.tsx`, `ProfilePage.tsx`.
+**Evidence:** `packages/server/app/auth.py`, `app/schemas.py`, `app/security.py`, `tests/test_auth.py`, and the React login and registration pages.
 
-**Current state:** validation schemas and hashing exist; registration, login,
-logout, sessions and profile UI do not.
+**Current state:** real registration, login, logout and session restoration exist. Profile editing, avatar upload, friends and live presence are required before claiming the full module.
 
 ---
 
@@ -158,7 +154,7 @@ entity and its permissions are.
 
 ---
 
-## 6. User — Major: advanced permissions (2 pts) · Lead B · ⬜
+## 6. User — Major: advanced permissions (2 pts) · Lead B · 🔄
 
 **Claim.** Three enforced layers: platform roles (Admin/Moderator/User), community
 roles (Owner/Member), and content ownership (author/seller/organiser).
@@ -171,8 +167,7 @@ roles (Owner/Member), and content ownership (author/seller/organiser).
 4. As a non-member, request a restricted community post by ID; show `403`.
 5. As a different user, try to edit someone else's post; show `403`.
 
-**Evidence:** the `users.role` check constraint in `packages/server/app/models.py`
-already restricts platform roles. Authorisation dependencies and route checks are
+**Evidence:** `app/permissions.py` and `app/posts.py` enforce ownership and platform role checks for text posts. The remaining community and administration permissions are
 planned: `app/dependencies/auth.py`, `app/routers/admin.py`,
 `docs/decisions/0003-permissions.md`.
 

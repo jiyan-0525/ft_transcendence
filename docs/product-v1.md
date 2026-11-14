@@ -12,12 +12,11 @@ Related documents: [User flows](user-flows.md) · [Data model](data-model.md)
 
 ## Current foundation
 
-- FastAPI with `/api/health`, PostgreSQL, SQLAlchemy, Alembic and psycopg.
-- User and authentication-session models, with an initial migration.
-- Argon2id password hashing, registration input and user response schemas.
-- Database connection and migration verified; three password-security tests passed; backend CI passed.
-
-Registration, login, logout, current-user lookup and cookie/session handling still need implementation. A React 19 + TypeScript + Vite scaffold exists in `packages/web`, but the application routes, design system and user-facing features are planned; this baseline does not verify their completion.
+- React application shell, navigation, reusable components, auth store and route guards.
+- FastAPI, PostgreSQL, Alembic, Argon2id, request validation and shared error responses.
+- Real registration, login, logout and session restoration. Email verification, Remember me and password reset are follow-up work.
+- Week 1 text feed with server-side ownership and role checks. The standalone post model is a reference implementation pending the shared Content decision (D05).
+- Development and local HTTPS configuration. See the [Week 1 handoff](handoff/week-1-backend.md) for verification.
 
 ## V1 scope
 
