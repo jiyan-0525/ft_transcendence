@@ -1,0 +1,41 @@
+services:
+  db:
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  api:
+    build:
+      context: .
+      dockerfile: deploy/api.Dockerfile
+    environment:
+      APP_ENV: production
+      DATABASE_URL: ${CONTAINER_DATABASE_URL:?Set CONTAINER_DATABASE_URL in .env}
+      AUTH_ALLOWED_ORIGIN: https://localhost:8443
+      AUTH_SESSION_HOURS: ${AUTH_SESSION_HOURS:-24}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/status', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/web.Dockerfile
+    ports:
+      - "127.0.0.1:8443:443"
+    volumes:
+      - caddy_data:/data
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  caddy_data:

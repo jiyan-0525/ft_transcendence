@@ -143,3 +143,54 @@ def test_cross_origin_logout_is_rejected(auth, account):
     response = client.post("/api/auth/logout", headers={"Origin": "https://untrusted.example"})
     assert response.status_code == 403
     assert client.get("/api/auth/me").status_code == 200
+
+
+def test_status_checks_database_and_returns_request_id(auth):
+    client, _ = auth
+    response = client.get("/api/status")
+    assert response.status_code == 200
+    assert response.json()["database"] == "ok"
+    assert response.headers["X-Request-ID"]
+
+
+def test_post_ownership_and_moderation(auth, account):
+    owner, db = auth
+    other_account = {
+        **account,
+        "email": f"{uuid4().hex}@example.com",
+        "username": "user_" + uuid4().hex,
+    }
+    assert owner.get("/api/posts").status_code == 401
+    assert owner.post("/api/posts", json={"body": "Guest post"}).status_code == 401
+    assert owner.post("/api/auth/register", json=account).status_code == 201
+    assert owner.post("/api/auth/login", json=credentials(account)).status_code == 200
+    owner_id = owner.get("/api/auth/me").json()["id"]
+    rejected = owner.post("/api/posts", json={"body": "Forged author", "author_id": 1})
+    assert rejected.status_code == 422
+    assert rejected.json()["error"]["requestId"] == rejected.headers["X-Request-ID"]
+
+    created = owner.post("/api/posts", json={"body": "Hello from Week 1"})
+    assert created.status_code == 201
+    post = created.json()
+    assert post["author_id"] == owner_id
+    path = f"/api/posts/{post['id']}"
+    assert owner.patch(path, json={"body": "Updated text"}).status_code == 200
+
+    with TestClient(app, base_url="https://testserver") as other:
+        assert other.post("/api/auth/register", json=other_account).status_code == 201
+        assert other.post("/api/auth/login", json=credentials(other_account)).status_code == 200
+        assert other.patch(path, json={"body": "Other edit"}).status_code == 403
+        assert other.delete(path).status_code == 403
+        assert {row["id"]: row["body"] for row in other.get("/api/posts").json()}[
+            post["id"]
+        ] == "Updated text"
+
+        other_id = other.get("/api/auth/me").json()["id"]
+        db.get(User, other_id).role = "MODERATOR"
+        db.commit()
+        assert other.patch(path, json={"body": "Moderator edit"}).status_code == 403
+        assert other.delete(path).status_code == 204
+
+    assert all(row["id"] != post["id"] for row in owner.get("/api/posts").json())
+    assert owner.post("/api/auth/logout").status_code == 204
+    assert owner.post("/api/posts", json={"body": "Logged out"}).status_code == 401

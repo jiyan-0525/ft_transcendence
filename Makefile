@@ -64,3 +64,11 @@ web-test: ## Run frontend tests with mock auth
 
 web-build: ## Build the frontend
 	@cd $(WEB) && npm run build
+
+.PHONY: stack-up stack-down
+
+stack-up: ## Build and start the local HTTPS stack on localhost:8443
+	@$(COMPOSE) -f compose.app.yml up --build -d
+
+stack-down: ## Stop the local HTTPS stack and retain database data
+	@$(COMPOSE) -f compose.app.yml down
