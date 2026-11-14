@@ -3,7 +3,7 @@
 **Project:** Community & Content Platform
 **Track:** 42 Heilbronn — Common Core, final project
 **Team size:** 5
-**Status:** Week 1 — backend foundation and React scaffold exist; product features planned
+**Status:** Week 1 baseline implements session authentication and a text-post reference. See the [handoff](docs/handoff/week-1-backend.md) for acceptance checks.
 **Target:** 18 module points (6 Major + 6 Minor); 14 required
 
 ---
@@ -56,8 +56,8 @@ capabilities that cut across every domain rather than separate products.
 | Realtime | Native JSON WebSocket (FastAPI/Starlette) | One protocol for chat, notifications and presence; no polling fallback to maintain |
 | Auth | Email/password + one OAuth provider, Argon2id, server-issued sessions | Requirement: secure password storage and external login |
 | File storage | Docker persistent volume + file metadata in PostgreSQL | Requirement: durable uploads with validation and access control |
-| Reverse proxy | Caddy, automatic HTTPS (planned) | "HTTPS everywhere" with minimal configuration |
-| Packaging | Docker Compose, multi-stage builds (planned) | Requirement: single-command deployment |
+| Reverse proxy | Caddy, local HTTPS | "HTTPS everywhere" with minimal configuration |
+| Packaging | Docker Compose, multi-stage frontend build | Requirement: single-command deployment |
 | Tests | pytest, Vitest + Testing Library, Playwright smoke tests | API/domain tests, unit tests and an end-to-end console check |
 
 ### Why FastAPI
@@ -86,71 +86,9 @@ the transactions that make "one seat left, two simultaneous RSVPs" correct.
 
 ## 3. Repository layout
 
-```
-ft_transcendence/
-├── compose.db.yml                # PostgreSQL for local development
-├── .env.example                  # committed template; real .env git-ignored
-├── Makefile                      # setup / up / migrate / dev / test / web-*
-├── README.md                     # graded entry point: roles, modules, demo
-├── PLAN.md                       # this file
-├── Social_Network.pdf            # 18-point module config, scoring boundaries, demo
-├── docs/
-│   ├── architecture.md           # diagrams, module boundaries, WebSocket protocol
-│   ├── data-model.md             # implemented schema and proposed V1 entities
-│   ├── protocol.md               # REST/WebSocket contract
-│   ├── module-claims.md          # per-module evidence + demo script
-│   ├── decisions/                # ADRs: stack, shared Content, permissions, realtime
-│   └── legal/                    # Privacy Policy, Terms of Service
-├── packages/
-│   ├── server/                   # Python 3.12 + FastAPI
-│   │   ├── alembic.ini
-│   │   ├── requirements.txt
-│   │   ├── app/
-│   │   │   ├── main.py           # FastAPI app and /api/health (exists)
-│   │   │   ├── config.py         # pydantic-settings (exists)
-│   │   │   ├── database.py       # engine, SessionLocal, get_db (exists)
-│   │   │   ├── models.py         # User, AuthSession (exists)
-│   │   │   ├── schemas.py        # request/response schemas (exists)
-│   │   │   ├── security.py       # Argon2id (exists)
-│   │   │   ├── routers/          # planned: auth, users, friends, content, ...
-│   │   │   ├── services/         # planned: transactions and domain rules
-│   │   │   └── dependencies/     # planned: current user and role checks
-│   │   ├── migrations/           # Alembic revisions
-│   │   └── tests/                # pytest: database, security, routes
-│   └── web/                      # React 19 + TypeScript + Vite
-│       └── src/
-│           ├── main.tsx          # React root (exists)
-│           ├── App.tsx           # bootstrap shell (exists)
-│           ├── pages/            # planned: Feed, Profile, Communities, Blog, ...
-│           ├── components/       # planned: design system (10+ reusable)
-│           ├── stores/           # planned: Zustand auth and UI stores
-│           ├── lib/              # planned: API client, WebSocket client
-│           └── router/           # planned: React Router routes and guards
-```
+See [Architecture](docs/architecture.md) for the current layout, request flow and execution modes.
 
-The backend foundation and the React shell follow this layout. Domain routers,
-services, the full Compose stack and Caddy configuration are Week 1 deliverables.
-
----
-
-## 4. Architecture
-
-The backend is a **modular monolith**: one deployable service, one database, and
-strict package boundaries per business domain.
-
-```
-Browser (React SPA)
-   │  HTTPS / REST                 WSS (planned)
-   ▼                                 ▼
-Caddy (planned) ──▶ FastAPI / Uvicorn ──▶ PostgreSQL
-                         │
-                         ├── auth / users / friends
-                         ├── communities / content
-                         ├── events / marketplace
-                         ├── notifications / media
-                         ├── search
-                         └── WebSocket hub (planned)
-```
+## 4. Architecture decisions
 
 ### 4.1 Why a monolith
 
@@ -180,9 +118,7 @@ community, content type, visibility and publication time. `Post`, `Article`,
 and attachments then work uniformly without forcing event registration and
 marketplace sales into one business model.
 
-This decision is confirmed in Week 1 against real query and permission
-complexity. If the shared layer makes either harder, the domain tables stay
-separate.
+The shared layer remains a proposal (D05). The Week 1 text-post reference uses an independent table.
 
 ### 4.4 Permissions
 
@@ -239,7 +175,7 @@ The full schema, constraints and migration workflow live in
 |---|---|---|
 | Users and relationships | `User`, `AuthSession`, `OAuthAccount`, `FriendRequest`, `Friendship` | `User` + `AuthSession` implemented; rest planned |
 | Communities | `Community`, `CommunityMember` | planned |
-| Content | `Content`, `Post`, `Article`, `Comment`, `Reaction` | planned |
+| Content | Text `Post`; proposed shared `Content`, articles, comments and Likes | Text post reference implemented; remaining entities planned |
 | Events | `Event`, `EventParticipant` | planned |
 | Marketplace | `Listing` | planned |
 | Chat | `Conversation`, `ConversationMember`, `Message` | planned |
@@ -247,7 +183,7 @@ The full schema, constraints and migration workflow live in
 | Notifications | `Notification` | planned |
 
 Implemented tables keep snake_case column names. The registration contract is
-already enforced in `packages/server/app/schemas.py`: password 15–128 characters,
+already enforced in `packages/server/app/schemas.py`: password 8–128 characters with uppercase, lowercase, a digit and punctuation,
 username 3–50 matching `^[A-Za-z0-9_]+$`, email normalised to lowercase. The
 React client maps backend snake_case DTOs to camelCase domain models.
 
@@ -473,7 +409,7 @@ project and their own contribution.*
 | Web app: frontend + backend + database | React 19 SPA · FastAPI API · PostgreSQL | Week 1 |
 | Frontend and backend frameworks | React 19 + Vite; Python 3.12 + FastAPI | Week 1 |
 | Git with clear commits from all members | Conventional Commits, one-review PR rule, protected `main` | §7.3 |
-| Single-command containerised deployment | `docker compose up --build` | Week 1 |
+| Single-command containerised deployment | `make stack-up` for the local HTTPS stack | Week 1 |
 | Latest stable Chrome | Vite build targets modern browsers | Week 6 |
 | No console warnings or errors | Playwright smoke run checks console output | Week 6 |
 | Privacy Policy + Terms of Service | Footer routes, real product-specific content | Week 6 |
@@ -484,7 +420,7 @@ project and their own contribution.*
 | Clear schema with relations | §5, migrations in Week 1 | Week 1 |
 | Secure signup/login | Hashed + salted passwords, server-issued sessions | Week 1 |
 | Frontend **and** backend input validation | Shared validation rules and boundary checks | Weeks 1–5 |
-| HTTPS everywhere | Caddy with automatic certificates and HTTP→HTTPS redirect | Week 1 |
+| HTTPS everywhere | Caddy with local TLS on port 8443 | Week 1 |
 | At least 14 module points | 18 committed points, §6 | Weeks 1–5 |
 | ORM | SQLAlchemy 2.0 models, Alembic migrations and relations | Week 1 |
 | Real-time features | WebSocket chat, notifications, presence, reconnect | Weeks 2–3 |

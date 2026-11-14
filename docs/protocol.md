@@ -1,9 +1,6 @@
 # Client–Server Protocol (Draft v0.2)
 
-**Status:** draft — Week 1 contract. Only `GET /api/health`, the database models
-and the registration schemas are implemented today; the rest is the agreed target
-for Weeks 2–5. Change this document before changing the FastAPI routes or the
-React client.
+**Status:** health, database readiness, session authentication and the text-post API reflect the Week 1 implementation. Other domain endpoints and the WebSocket contract are proposals.
 
 **Stack:** React 19 + TypeScript frontend (React Router 7, Zustand 5, TanStack
 Query 5); Python 3.12 + FastAPI backend; PostgreSQL with SQLAlchemy 2.0 and
@@ -30,17 +27,14 @@ downloads.
 
 ### 2.2 Authentication
 
-The browser authenticates with an HTTP-only session cookie issued at login. The
-session is checked on every REST request and during the WebSocket handshake.
-Access tokens, if used for non-browser clients, are sent as
-`Authorization: Bearer <token>`.
+Protected REST routes validate the HttpOnly `session` cookie issued at login. The default server-side lifetime is 24 hours and can be changed with `AUTH_SESSION_HOURS`. The cookie uses `SameSite=Lax` and is Secure in production mode. The WebSocket handshake is planned.
 
 Clients never send a user ID to identify themselves for authorisation. The server
 derives identity from the session.
 
 ### 2.3 Errors
 
-The target envelope is:
+The error envelope is:
 
 ```json
 {
@@ -55,15 +49,11 @@ The target envelope is:
 Stable codes: `INVALID_PAYLOAD`, `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`,
 `CONFLICT`, `RATE_LIMITED`, `INTERNAL`.
 
-FastAPI raises `{"detail": ...}` by default, and Pydantic validation errors use a
-`detail` array. Those are framework shapes, not this contract. The API must map
-them to the envelope above before clients depend on the error shape; until then
-the React client normalises both forms in one place (`lib/api.ts`) and exposes a
-single `ApiError` type.
+FastAPI and validation errors use the same envelope. The response header `X-Request-ID` matches `error.requestId`. The React client exposes errors as `ApiError`.
 
 ### 2.4 Pagination
 
-Cursor pagination for feeds, messages and notifications:
+Planned cursor pagination for the unified feed, messages and notifications:
 
 ```json
 {
@@ -93,8 +83,7 @@ IDs, file type and file size. Client validation is for usability only.
 { "status": "ok", "service": "community-api" }
 ```
 
-This is a liveness check. Dependency health (database, storage, WebSocket hub)
-belongs on the status endpoint added in a later week.
+This is a liveness check. `GET /api/status` checks PostgreSQL and returns `200` with `{"status":"ok","database":"ok"}` or `503` if the database is unavailable.
 
 ---
 
@@ -105,8 +94,7 @@ belongs on the status endpoint added in a later week.
 | `POST` | `/api/auth/register` | Create an account (email, username, password) |
 | `POST` | `/api/auth/login` | Email/password login; sets the session cookie |
 | `POST` | `/api/auth/logout` | Revoke the current session |
-| `POST` | `/api/auth/refresh` | Rotate a refresh credential |
-| `GET` | `/api/auth/me` | Current user, roles and session metadata |
+| `GET` | `/api/auth/me` | Current user profile and role |
 | `GET` | `/api/auth/oauth/:provider/start` | Begin OAuth 2.0 authorisation |
 | `GET` | `/api/auth/oauth/:provider/callback` | Complete OAuth and create/link the account |
 | `POST` | `/api/auth/oauth/:provider/link` | Link a provider to an existing account |
@@ -128,7 +116,7 @@ never logged, stored or returned. The registration contract already implemented 
 Status codes agreed with the frontend (details in `docs/handoff/auth-frontend.md`):
 
 - `register` → `201` with `UserResponse`. Registration does **not** sign the user
-  in and sets no cookie. Duplicate email or username → `409 CONFLICT`.
+  in and sets no cookie. Duplicate email or username → `409 CONFLICT`, with a message naming the conflicting field.
 - `login` → `200` with `UserResponse` and the session cookie. Wrong credentials →
   `401 UNAUTHENTICATED`. The login form checks only that the password is present.
 - `logout` → `204` and the cookie is cleared.
@@ -136,7 +124,7 @@ Status codes agreed with the frontend (details in `docs/handoff/auth-frontend.md
 
 ---
 
-## 5. Users and friendships
+## 5. Users and friendships (planned)
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -179,12 +167,24 @@ policy, not a partial response.
 
 ---
 
-## 7. Content: feed, posts, articles, comments, reactions
+## 7. Content
+
+### Implemented Week 1 text posts
+
+All four routes require an active session. Create and update accept only `{"body":"Hello"}`, with 1–2,000 characters after trimming. Returned posts contain `id`, `author_id`, `author_username`, `body` and `created_at`.
+
+| Method | Route | Result |
+|---|---|---|
+| GET | `/api/posts` | 200 with a newest-first array. `limit` defaults to 30 and accepts 1–100. |
+| POST | `/api/posts` | 201 with the new post. The session supplies the author. |
+| PATCH | `/api/posts/{id}` | 200 with the updated post. Author only. |
+| DELETE | `/api/posts/{id}` | 204. Author, Moderator or Admin. |
+
+### Planned content API
 
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/api/feed` | Chronological feed; filters `all`, `friends`, `communities` |
-| `POST` | `/api/posts` | Create a post (text, images, visibility) |
 | `POST` | `/api/articles` | Create an article (title, summary, cover, Markdown, tags) |
 | `GET` | `/api/content/:id` | Read one item, subject to visibility |
 | `PATCH` | `/api/content/:id` | Author edits |
@@ -297,7 +297,7 @@ Regular users receive `403` for every admin route.
 
 ---
 
-## 14. WebSocket
+## 14. WebSocket (planned)
 
 ### 14.1 Connection
 

@@ -4,7 +4,7 @@ Team design baseline · 5 November 2026
 
 Scope and decision IDs: [Product V1](product-v1.md) · Schema: [Data model](data-model.md)
 
-These flows describe the target behaviour. The backend foundation and the React scaffold are verified; authentication routes, the application UI and business flows still need implementation. Open decisions are tracked in Product V1.
+Week 1 implements registration, login, session restoration, logout and a text-only feed. The diagrams also cover target behaviour. Email verification, password reset, Remember me and the remaining social flows are planned. See the [backend handoff](handoff/week-1-backend.md) for the current demo.
 
 ## 1. Accounts and sessions
 

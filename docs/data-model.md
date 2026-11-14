@@ -23,7 +23,7 @@ planned table or field as implemented until its Alembic revision is merged.
 
 ---
 
-## 2. Implemented schema (migration `88fd3dcf3c30`)
+## 2. Implemented schema
 
 ### `users`
 
@@ -79,6 +79,19 @@ The source of truth is `packages/server/app/models.py` and the migration under
 `packages/server/migrations/versions/`.
 
 ---
+
+### `posts`
+
+Migration `88fd3dcf3c30` creates users and sessions. The Week 1 revision `b3080df2fc01` adds the standalone text-post table.
+
+| Field | Storage |
+|---|---|
+| `id` | Integer primary key |
+| `author_id` | Required reference to `users.id` with restricted deletion |
+| `body` | Required text, at most 2,000 characters |
+| `created_at` | Timezone-aware timestamp with a server default |
+
+One user can author many posts. The `(created_at, id)` index supports newest-first listing. The Week 1 post routes use the session to set the author. The example deletes rows directly and D05 and D06 still govern the target design.
 
 ## 3. Planned V1 entities
 
