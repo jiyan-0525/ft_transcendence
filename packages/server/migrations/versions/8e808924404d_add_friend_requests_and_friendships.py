@@ -27,12 +27,12 @@ def upgrade() -> None:
     sa.Column('addressee_id', sa.Integer(), nullable=False),
     sa.Column('status', sa.String(length=16), server_default='PENDING', nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.CheckConstraint("status IN ('PENDING', 'ACCEPTED', 'REJECTED')", name='ck_friend_requests_not_self'),
-    sa.CheckConstraint('requester_id <> addressee_id', name='ck_friends_requests_status'),
+    sa.CheckConstraint("status IN ('PENDING', 'ACCEPTED', 'REJECTED')", name='ck_friend_requests_status'),
+    sa.CheckConstraint('requester_id <> addressee_id', name='ck_friend_requests_not_self'),
     sa.ForeignKeyConstraint(['addressee_id'], ['users.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['requester_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('requester_id', 'addressee_id', name='uq_freind_requests_pair')
+    sa.UniqueConstraint('requester_id', 'addressee_id', name='uq_friend_requests_pair')
     )
     op.create_index(op.f('ix_friend_requests_addressee_id'), 'friend_requests', ['addressee_id'], unique=False)
     op.create_index(op.f('ix_friend_requests_requester_id'), 'friend_requests', ['requester_id'], unique=False)
