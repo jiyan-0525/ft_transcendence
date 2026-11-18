@@ -88,17 +88,17 @@ class FriendRequest(Base):
     # Rule 1: status may only be one of these three values.
         CheckConstraint(
         "status IN ('PENDING', 'ACCEPTED', 'REJECTED')",
-        name="ck_friend_requests_not_self",
+        name="ck_friend_requests_status",
     ),
     # Rule 2: a user cannot send a friend request to themselves.
     CheckConstraint(
         "requester_id <> addressee_id",
-        name="ck_friends_requests_status",
+        name="ck_friend_requests_not_self",
     ),
     # Rule 3: the same requester can only have ONE request to the same
     UniqueConstraint(
         "requester_id", "addressee_id",
-        name="uq_freind_requests_pair",
+        name="uq_friend_requests_pair",
     ),
 )
 
