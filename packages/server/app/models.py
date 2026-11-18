@@ -82,65 +82,65 @@ class Post(Base):
         DateTime(timezone=True), server_default=func.now()
     )
 
-class FrindsReequest(Base):
-    __tablename__ = "frind_requests"
+class FriendRequest(Base):
+    __tablename__ = "friend_requests"
     __table_args__ = (
     # Rule 1: status may only be one of these three values.
         CheckConstraint(
-        "status IN ('PENDING', 'ASSEPTED', 'REJECTED')",
-        name="ck_frind_requests_not_self",
+        "status IN ('PENDING', 'ACCEPTED', 'REJECTED')",
+        name="ck_friend_requests_not_self",
     ),
     # Rule 2: a user cannot send a friend request to themselves.
     CheckConstraint(
         "requester_id <> addressee_id",
-        name="ck_frinds_requests_status",
+        name="ck_friends_requests_status",
     ),
     # Rule 3: the same requester can only have ONE request to the same
     UniqueConstraint(
-        "request_id", "addresse_id",
-        name="uq_frind_requests_pair",
+        "requester_id", "addressee_id",
+        name="uq_freind_requests_pair",
     ),
 )
 
 # Unique ID for each request (auto-incrementing integer).
-id: Mapped[int] = mapped_colum(primary_key=True)
-requester_id: Mapped[int] = mapped_column(
-    ForeignKey("user_id", ondelete="CASCADE"), index=True
-)
-# The user who RECEIVED the request. Same rules as above.
-addressee_id: Mapped[int] = mapped_colum(
-    ForeignKey("user_id", ondelete="CASCADE"), index=True
-)
-# When the request was created.
-status: Mapped[str] = mapped_colum(string(16), server_default="PENDING")
-created_at: Mapped[datetime] = mapped_colum(
-    DateTime*timezone(True), server_default=func.now()
-)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    requester_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    # The user who RECEIVED the request. Same rules as above.
+    addressee_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    status: Mapped[str] = mapped_column(String(16), server_default="PENDING")
+    # When the request was created.
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
-class Frindship(Base):
-    __tablenasme__="frindships"
+class Friendship(Base):
+    __tablename__="friendships"
     __table_args__=(
         # Rule 1: the smaller user ID must always be stored in user_a_id
         CheckConstraint(
             "user_a_id < user_b_id",
-            name="ck_frindships_ordered_pair",
+            name="ck_friendships_ordered_pair",
         ),
         # Rule 2: each pair can only appear once.
         UniqueConstraint(
             "user_a_id", "user_b_id",
-            name="uq_frindships_pair"
+            name="uq_friendships_pair"
     ),
 )
-# Unique ID for each friendship.
-id: Mapped[int] = mapped_colum(primary_key=True)
-#Deleted automatically if one of the ids is is deletet(CASCADE)
-user_a_id: Mapped[int] = mapped_colum(
-    ForeignKey("users.id", ondelet="CASCADE"), index=True
-)
-user_b_id: Mapped[int] = mapped_colum(
-    ForeignKey("users.id", ondelet="CASCADE"), index=True
-)
- # When the two users became friends (set automatically by the database).
-created_at: Mapped[datetime] =mapped_colum(
-    ForeignKey(timezone=True), server_default=func.now()
-)
+    # Unique ID for each friendship.
+    id: Mapped[int] = mapped_column(primary_key=True)
+    #Deleted automatically if one of the ids is is deleted(CASCADE)
+    user_a_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    user_b_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    # When the two users became friends (set automatically by the database).
+    created_at: Mapped[datetime] =mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
