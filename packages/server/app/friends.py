@@ -21,6 +21,11 @@ class FriendRequestResponse(BaseModel):
     status: str
     created_at: datetime
 
+class FriendRequestList(BaseModel):
+    incoming: list[FriendRequestResponse]
+    outgoing: list[FriendRequestResponse]
+
+
 def request_response(req: FriendRequest) -> FriendRequestResponse:
     return(FriendRequestResponse(
         id=req.id, requester_id=req.requester_id, addressee_id=req.addressee_id,
@@ -42,3 +47,19 @@ def send_request(body: FriendRequestInput, db: DbSession, user: CurrentUser) -> 
     db.commit()
     db.refresh(req)
     return request_response(req)
+
+@router.get("/requests")
+def list_requests(db: DbSession, user: CurrentUser) -> FriendRequestList:
+    incoming = db.scalars(
+        select(FriendRequest).where(FriendRequest.addressee_id == user.id, FriendRequest.status == "PENDING")
+        .order_by(FriendRequest.created_at.desc())
+    )
+    outgoing = db.scalars(
+        select(FriendRequest).where(FriendRequest.requester_id == user.id, FriendRequest.status == "PENDING").
+        order_by(FriendRequest.created_at.desc())
+    )
+    
+    return FriendRequestList(
+        incoming = [request_response(r) for r in incoming],
+        outgoing = [request_response(r) for r in outgoing],
+    )

@@ -23,7 +23,7 @@ def test_send_friend_request(auth, account):
     with TestClient(app, base_url="https://testserver") as ben:
         ben_id = login(ben, new_account())
 
-        # Anna fragt Ben an
+        #  Anna send request to ben
         response = anna.post("/api/friends/requests", json={"user_id": ben_id})
         assert response.status_code == 201
         req = response.json()
@@ -31,11 +31,32 @@ def test_send_friend_request(auth, account):
         assert req["addressee_id"] == ben_id
         assert req["status"] == "PENDING"
 
-        # Nochmal senden -> dieselbe Anfrage zurück (idempotent)
+        #(idempotent) Send again -> same request 
         again = anna.post("/api/friends/requests", json={"user_id": ben_id})
         assert again.json()["id"] == req["id"]
 
-    # Sich selbst anfragen -> 422
+    #  Send to him self ->422
     assert anna.post("/api/friends/requests", json={"user_id": anna_id}).status_code == 422
-    # Unbekannter Nutzer -> 404
+    #  unkown user -> 404
     assert anna.post("/api/friends/requests", json={"user_id": 999999}).status_code == 404
+
+def test_list_friend_requests(auth, account):
+    anna, _ = auth
+    anna_id = login(anna, account)
+
+    with TestClient(app, base_url="https://testserver") as ben:
+        ben_id = login(ben, new_account())
+        anna.post("/api/friends/requests", json={"user_id": ben_id})
+
+        response = anna.get("/api/friends/requests")
+        assert response.status_code == 200
+        lists = response.json()
+        assert [r["addressee_id"] for r in lists["outgoing"]] == [ben_id]
+        assert lists['incoming'] == []
+
+        lists = ben.get("/api/friends/requests").json()
+        assert [r["requester_id"] for r in lists["incoming"]] == [anna_id]
+        assert lists["outgoing"] == []
+
+    with TestClient(app, base_url="https://testserver") as guest:
+        assert guest.get("/api/friends/requests").status_code == 401
