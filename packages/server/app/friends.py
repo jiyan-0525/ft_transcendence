@@ -82,7 +82,8 @@ def accept_request(request_id: int, db: DbSession, user:CurrentUser) -> FriendRe
     req.status = "ACCEPTED"
     user_a_id, user_b_id = sorted((req.requester_id, req.addressee_id))
     already = db.scalar(
-        select(Friendship.user_a_id == user_a_id, Friendship.user_b_id == user_b_id,)
+        select(Friendship).where(Friendship.user_a_id == user_a_id, Friendship.user_b_id == user_b_id,)
+        
     )
     if already is None:
         db.add(Friendship(user_a_id=user_a_id, user_b_id=user_b_id))
