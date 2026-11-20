@@ -31,6 +31,12 @@ def request_response(req: FriendRequest) -> FriendRequestResponse:
         id=req.id, requester_id=req.requester_id, addressee_id=req.addressee_id,
         status=req.status, created_at=req.created_at, 
     ))
+def find_request(db: DbSession, request_id: int) -> FriendRequest:
+    req = db.get(FriendRequest, request_id)
+    if req is None:
+        raise HTTPException(404, "Friend Request not found.")
+    return(req)
+
 @router.post("/requests", status_code=201, dependencies=[Depends(require_trusted_origin)])
 def send_request(body: FriendRequestInput, db: DbSession, user: CurrentUser) -> FriendRequestResponse:
     if body.user_id == user.id:
@@ -63,3 +69,23 @@ def list_requests(db: DbSession, user: CurrentUser) -> FriendRequestList:
         incoming = [request_response(r) for r in incoming],
         outgoing = [request_response(r) for r in outgoing],
     )
+
+@router.post("/requests/{request_id}/accept", dependencies=[Depends(require_trusted_origin)])
+def accept_request(request_id: int, db: DbSession, user:CurrentUser) -> FriendRequestResponse:
+    req = find_request(db, request_id)
+    if req.addressee_id != user.id:
+        raise HTTPException(403, "Only the recipient can accept this request.")
+
+    if req.status != "PENDING":
+        raise HTTPException(409, "This request is no longer active.")
+    
+    req.status = "ACCEPTED"
+    user_a_id, user_b_id = sorted((req.requester_id, req.addressee_id))
+    already = db.scalar(
+        select(Friendship.user_a_id == user_a_id, Friendship.user_b_id == user_b_id,)
+    )
+    if already is None:
+        db.add(Friendship(user_a_id=user_a_id, user_b_id=user_b_id))
+    
+    db.commit()
+    return(request_response(req))

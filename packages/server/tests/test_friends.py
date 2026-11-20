@@ -1,9 +1,10 @@
 from uuid import uuid4
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from app.main import app
 from tests.test_auth import auth, account, credentials   # noqa: F401  (Fixtures wiederverwenden)
-
+from app.models import Friendship
 
 def new_account():
     suffix = uuid4().hex
@@ -60,3 +61,32 @@ def test_list_friend_requests(auth, account):
 
     with TestClient(app, base_url="https://testserver") as guest:
         assert guest.get("/api/friends/requests").status_code == 401
+
+def test_accept_friend_request(auth, account):
+    anna, db = auth
+    anna_id = login(anna, account)
+
+    with TestClient(app, base_url="https://testserver") as ben:
+        ben_id = login(ben, new_account())
+        req = anna.post("/api/friends/requests", json={"user_id": ben_id}).json()
+        path = f"/api/friends/requests/{req['id']}/accept"
+
+        assert anna.post(path).status_code == 403
+
+        response = ben.post(path)
+        assert response.status_code == 200
+        assert response.json()["status"] == "ACCEPTED"
+
+        assert ben.post(path).status_code == 409
+
+        assert ben.get("/api/friends/requests").json()["incoming"] == []
+    
+    friendship = db.scalar(
+        select(Friendship).where(
+            Friendship.user_a_id == min(anna_id, ben_id), Friendship.user_b_id == max(anna_id, ben_id),
+        )
+    )
+
+    assert friendship is not None
+
+    assert anna.post("/api/firends/requests/99999/accept").status_code == 404
