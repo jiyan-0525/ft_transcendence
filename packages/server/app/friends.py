@@ -32,7 +32,7 @@ def request_response(req: FriendRequest) -> FriendRequestResponse:
         status=req.status, created_at=req.created_at, 
     ))
 def find_request(db: DbSession, request_id: int) -> FriendRequest:
-    req = db.get(FriendRequest, request_id)
+    req = db.get(FriendRequest, request_id, with_for_update=True)
     if req is None:
         raise HTTPException(404, "Friend Request not found.")
     return(req)
@@ -86,6 +86,19 @@ def accept_request(request_id: int, db: DbSession, user:CurrentUser) -> FriendRe
     )
     if already is None:
         db.add(Friendship(user_a_id=user_a_id, user_b_id=user_b_id))
+    
+    db.commit()
+    return(request_response(req))
+
+@router.post("/requests/{request_id}/reject", dependencies=[Depends(require_trusted_origin)])
+def reject_request(request_id: int, db: DbSession, user: CurrentUser) -> FriendRequestResponse:
+    req = find_request(db, request_id)
+    if req.addressee_id != user.id:
+        raise HTTPException(403, "Only the recipient can reject the request.")
+    
+    if req.status != "PENDING":
+        raise HTTPException(409, "This request is no longer active.")
+    req.status = "REJECTED"
     
     db.commit()
     return(request_response(req))

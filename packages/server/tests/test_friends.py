@@ -89,4 +89,7 @@ def test_accept_friend_request(auth, account):
 
     assert friendship is not None
 
-    assert anna.post("/api/firends/requests/99999/accept").status_code == 404
+    assert anna.post("/api/friends/requests/99999/accept").status_code == 404
+
+def test_reject_friend_request(auth, account):
+    
