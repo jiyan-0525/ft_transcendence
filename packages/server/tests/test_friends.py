@@ -148,7 +148,7 @@ def test_list_friends(auth, account):
 
         #anna and ben get friends
         req = anna.post("/api/friends/requests", json={"user_id": ben_id}).json()
-        ben.post(f"/api/friends/requests/{req['id']}/accept").status_code == 200
+        assert ben.post(f"/api/friends/requests/{req['id']}/accept").status_code == 200
 
         friends = anna.get("/api/friends").json()
         assert [f["user_id"] for f in friends] == [ben_id]
@@ -164,4 +164,20 @@ def test_list_friends(auth, account):
         login(carl, new_account())
         assert carl.get("/api/friends").json() == []
 
+def test_remove_friend(auth, account):
+    anna, _ = auth
+    anna_id = login(anna, account)
+
+    with TestClient(app, base_url = "https://testserver") as ben:
+        ben_id = login(ben, new_account())
+        req = anna.post("/api/friends/requests", json = {"user_id": ben_id}).json()
+        assert ben.post(f"/api/friends/requests/{req['id']}/accept").status_code == 200
+        assert anna.delete(f"api/friends/{ben_id}").status_code == 204
+        assert anna.get("/api/friends").json() == []
+        assert ben.get("/api/friends").json() == []
+
+        assert anna.delete(f"/api/friends/{ben_id}").status_code == 404
+    
+    with TestClient(app, base_url="https://testserver") as guest:
+        assert guest.delete(f"/api/friends/{anna_id}").status_code == 401
 

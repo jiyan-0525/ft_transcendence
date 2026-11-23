@@ -74,7 +74,6 @@ def list_requests(db: DbSession, user: CurrentUser) -> FriendRequestList:
         incoming = [request_response(r) for r in incoming],
         outgoing = [request_response(r) for r in outgoing],
     )
-
 @router.post("/requests/{request_id}/accept", dependencies=[Depends(require_trusted_origin)])
 def accept_request(request_id: int, db: DbSession, user:CurrentUser) -> FriendRequestResponse:
     req = find_request(db, request_id)
@@ -124,3 +123,18 @@ def list_friends(user: CurrentUser, db: DbSession) -> list[FriendResponse]:
             since=f.created_at,
         ))
     return(result)
+
+
+@router.delete("/{user_id}", status_code = 204, dependencies=[Depends(require_trusted_origin)])
+def delete_friend(user_id: int, db: DbSession, user: CurrentUser) -> None:
+    user_a_id, user_b_id = sorted((user.id, user_id))
+    friendship  = db.scalar(select(Friendship).where(
+        Friendship.user_a_id == user_a_id,
+        Friendship.user_b_id == user_b_id,
+        )
+    )
+
+    if friendship is None:
+        raise HTTPException(404, "Friendship not found.")
+    db.delete(friendship)
+    db.commit()
