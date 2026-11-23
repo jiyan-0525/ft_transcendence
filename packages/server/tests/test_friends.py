@@ -137,3 +137,31 @@ def test_reject_friend_request(auth, account):
     assert friendship is None
 
     assert anna.post("/api/friends/requests/99999/reject").status_code == 404
+
+def test_list_friends(auth, account):
+    anna, _ = auth
+    anna_id = login(anna, account)
+
+    with TestClient(app, base_url = "https://testserver") as ben:
+        ben_account = new_account()
+        ben_id = login(ben, ben_account)
+
+        #anna and ben get friends
+        req = anna.post("/api/friends/requests", json={"user_id": ben_id}).json()
+        ben.post(f"/api/friends/requests/{req['id']}/accept").status_code == 200
+
+        friends = anna.get("/api/friends").json()
+        assert [f["user_id"] for f in friends] == [ben_id]
+        assert friends[0]["username"] == ben_account["username"]
+        friends = ben.get("/api/friends").json()
+        assert [f["user_id"] for f in friends] == [anna_id]
+
+
+    with TestClient(app, base_url = "https://testserver") as guest:
+        assert guest.get("/api/friends"). status_code == 401
+
+    with TestClient(app, base_url="https://testserver") as carl:
+        login(carl, new_account())
+        assert carl.get("/api/friends").json() == []
+
+

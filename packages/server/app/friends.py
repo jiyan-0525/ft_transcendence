@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import select
+from sqlalchemy import select, or_
 
 from app.auth import DbSession, get_current_user, require_trusted_origin
 from app.models import FriendRequest, Friendship, User
@@ -24,6 +24,11 @@ class FriendRequestResponse(BaseModel):
 class FriendRequestList(BaseModel):
     incoming: list[FriendRequestResponse]
     outgoing: list[FriendRequestResponse]
+
+class FriendResponse(BaseModel):
+    user_id: int
+    username: str
+    since: datetime
 
 
 def request_response(req: FriendRequest) -> FriendRequestResponse:
@@ -103,3 +108,19 @@ def reject_request(request_id: int, db: DbSession, user: CurrentUser) -> FriendR
     
     db.commit()
     return(request_response(req))
+
+@router.get("")
+def list_friends(user: CurrentUser, db: DbSession) -> list[FriendResponse]:
+    friendships = db.scalars(select(Friendship).where(
+        or_(Friendship.user_a_id == user.id, Friendship.user_b_id == user.id)
+    ))
+    result = []
+    for f in friendships:
+        other_id = f.user_b_id if f.user_a_id == user.id else f.user_a_id
+        other = db.get(User, other_id)
+        result.append(FriendResponse(
+            user_id = other.id,
+            username = other.username,
+            since=f.created_at,
+        ))
+    return(result)
