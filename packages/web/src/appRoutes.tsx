@@ -3,6 +3,7 @@ import AppShell from './components/layout/AppShell'
 import AuthLayout from './components/layout/AuthLayout'
 import DesignSystemPage from './pages/DesignSystemPage'
 import FeedPage from './pages/FeedPage'
+// import FriendsPage from './pages/FriendsPage'
 import LoginPage from './pages/LoginPage'
 import NotFoundPage from './pages/NotFoundPage'
 import PlaceholderPage from './pages/PlaceholderPage'
@@ -57,13 +58,21 @@ export const routes: RouteObject[] = [
           'Avatar, biography, published content, friends and online status.',
         ),
       },
+      // {
+      //   path: 'friends',
+      //   element: (
+      //     <RequireAuth>
+      //       <FriendsPage />
+      //     </RequireAuth>
+      //   ),
+      // },
       {
-        path: 'friends',
+        path: 'messages',
         element: (
           <RequireAuth>
             {planned(
-              'Friends',
-              'Send, accept, reject and remove friend connections.',
+              'Messages',
+              'Persistent one-to-one chat with real-time delivery.',
             )}
           </RequireAuth>
         ),
