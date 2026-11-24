@@ -23,6 +23,7 @@ type NavItem = {
 const channels: NavItem[] = [
   { to: '/', label: 'Feed', end: true },
   { to: '/communities', label: 'Communities' },
+   { to: '/friends', label: 'Friends' },
   { to: '/blog', label: 'Blog' },
   { to: '/events', label: 'Events' },
   { to: '/marketplace', label: 'Marketplace' },
