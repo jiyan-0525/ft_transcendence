@@ -7,12 +7,14 @@ from app.auth import router as auth_router
 from app.config import settings
 from app.errors import install_error_handlers
 from app.posts import router as posts_router
+from app.friends import router as friends_router
 
 
 app = FastAPI(title=settings.app_name)
 install_error_handlers(app)
 app.include_router(auth_router)
 app.include_router(posts_router)
+app.include_router(friends_router)
 
 
 @app.get("/api/health")
