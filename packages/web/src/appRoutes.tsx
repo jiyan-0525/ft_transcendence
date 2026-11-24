@@ -58,14 +58,17 @@ export const routes: RouteObject[] = [
           'Avatar, biography, published content, friends and online status.',
         ),
       },
-      // {
-      //   path: 'friends',
-      //   element: (
-      //     <RequireAuth>
-      //       <FriendsPage />
-      //     </RequireAuth>
-      //   ),
-      // },
+      {
+        path: 'friends',
+        element: (
+          <RequireAuth>
+            {planned(
+              'Friends',
+              'Send, accept, reject and remove friend connections.',
+            )}
+          </RequireAuth>
+        ),
+      },
       {
         path: 'messages',
         element: (
