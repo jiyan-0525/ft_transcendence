@@ -16,6 +16,7 @@ const exactTitles: Record<string, string> = {
   '/settings': 'Settings',
   '/legal/privacy': 'Privacy policy',
   '/legal/terms': 'Terms of service',
+  '/legal/cookies': 'Cookie policy',
   '/admin': 'Administration',
   '/design': 'Design system',
   '/login': 'Log in',
