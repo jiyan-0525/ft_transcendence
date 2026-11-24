@@ -8,6 +8,7 @@ from sqlalchemy import (
     ForeignKey,
     String,
     Text,
+    UniqueConstraint,
     func,
     text,
 )
@@ -78,5 +79,68 @@ class Post(Base):
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
     body: Mapped[str] = mapped_column(String(2000))
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+class FriendRequest(Base):
+    __tablename__ = "friend_requests"
+    __table_args__ = (
+    # Rule 1: status may only be one of these three values.
+        CheckConstraint(
+        "status IN ('PENDING', 'ACCEPTED', 'REJECTED')",
+        name="ck_friend_requests_status",
+    ),
+    # Rule 2: a user cannot send a friend request to themselves.
+    CheckConstraint(
+        "requester_id <> addressee_id",
+        name="ck_friend_requests_not_self",
+    ),
+    # Rule 3: the same requester can only have ONE request to the same
+    UniqueConstraint(
+        "requester_id", "addressee_id",
+        name="uq_friend_requests_pair",
+    ),
+)
+
+# Unique ID for each request (auto-incrementing integer).
+    id: Mapped[int] = mapped_column(primary_key=True)
+    requester_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    # The user who RECEIVED the request. Same rules as above.
+    addressee_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    status: Mapped[str] = mapped_column(String(16), server_default="PENDING")
+    # When the request was created.
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+class Friendship(Base):
+    __tablename__="friendships"
+    __table_args__=(
+        # Rule 1: the smaller user ID must always be stored in user_a_id
+        CheckConstraint(
+            "user_a_id < user_b_id",
+            name="ck_friendships_ordered_pair",
+        ),
+        # Rule 2: each pair can only appear once.
+        UniqueConstraint(
+            "user_a_id", "user_b_id",
+            name="uq_friendships_pair"
+    ),
+)
+    # Unique ID for each friendship.
+    id: Mapped[int] = mapped_column(primary_key=True)
+    #Deleted automatically if one of the ids is is deleted(CASCADE)
+    user_a_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    user_b_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    # When the two users became friends (set automatically by the database).
+    created_at: Mapped[datetime] =mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

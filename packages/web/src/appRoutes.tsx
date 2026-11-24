@@ -184,6 +184,10 @@ export const routes: RouteObject[] = [
         element: planned('Terms of Service', 'Product-specific terms of service.'),
       },
       {
+         path: 'legal/cookies',
+        element: planned('Cookie Policy', 'How we use cookies.'),
+      },
+      {
         path: 'admin',
         element: (
           <RequireAdmin>
