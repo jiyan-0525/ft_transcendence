@@ -172,7 +172,7 @@ def test_list_friends(auth, account):
 def test_remove_friend(auth, account):
     anna, _ = auth
     anna_id = login(anna, account)
-
+  
     with TestClient(app, base_url = "https://testserver") as ben:
         ben_id = login(ben, new_account())
         req = anna.post("/api/friends/requests", json = {"user_id": ben_id}).json()
@@ -219,3 +219,15 @@ def test_request_again_after_removal(auth, account):
 
         befriend(anna, ben, ben_id)          # klappt jetzt ein zweites Mal
         assert [f["user_id"] for f in anna.get("/api/friends").json()] == [ben_id]
+
+def test_request_list_show_name(auth, account):
+    anna, _ = auth
+    login(anna, account)
+
+    with TestClient(app, base_url="https://testserver") as ben:
+        ben_account = new_account()
+        ben_id = login(ben, ben_account)
+        anna.post("/api/friends/requests", json={"user_id": ben_id})
+        incoming = ben.get("/api/friends/requests").json()["incoming"]
+        assert incoming[0]["requester_username"] == account["username"]
+        assert incoming[0]["addressee_username"] == ben_account["username"]

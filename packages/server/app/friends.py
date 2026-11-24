@@ -17,7 +17,9 @@ class FriendRequestInput(BaseModel):
 class FriendRequestResponse(BaseModel):
     id: int
     requester_id: int
+    requester_username: str
     addressee_id: int
+    addressee_username: str
     status: str
     created_at: datetime
 
@@ -31,10 +33,15 @@ class FriendResponse(BaseModel):
     since: datetime
 
 
-def request_response(req: FriendRequest) -> FriendRequestResponse:
+def request_response(db: DbSession, req: FriendRequest) -> FriendRequestResponse:
     return(FriendRequestResponse(
-        id=req.id, requester_id=req.requester_id, addressee_id=req.addressee_id,
-        status=req.status, created_at=req.created_at, 
+        id=req.id,
+        requester_id=req.requester_id,
+        requester_username=db.get(User, req.requester_id).username,
+        addressee_id=req.addressee_id,
+        addressee_username=db.get(User, req.addressee_id).username,
+        status=req.status,
+        created_at=req.created_at, 
     ))
 def find_request(db: DbSession, request_id: int) -> FriendRequest:
     req = db.get(FriendRequest, request_id, with_for_update=True)
@@ -77,12 +84,12 @@ def send_request(body: FriendRequestInput, db: DbSession, user: CurrentUser) -> 
         if existing.status != "PENDING":
             existing.status = "PENDING"
             db.commit()
-        return request_response(existing)
+        return request_response(db, existing)
     req = FriendRequest(requester_id=user.id, addressee_id=body.user_id)
     db.add(req)
     db.commit()
     db.refresh(req)
-    return request_response(req)
+    return request_response(db, req)
 
 @router.get("/requests")
 def list_requests(db: DbSession, user: CurrentUser) -> FriendRequestList:
@@ -96,8 +103,8 @@ def list_requests(db: DbSession, user: CurrentUser) -> FriendRequestList:
     )
     
     return FriendRequestList(
-        incoming = [request_response(r) for r in incoming],
-        outgoing = [request_response(r) for r in outgoing],
+        incoming = [request_response(db, r) for r in incoming],
+        outgoing = [request_response(db, r) for r in outgoing],
     )
 @router.post("/requests/{request_id}/accept", dependencies=[Depends(require_trusted_origin)])
 def accept_request(request_id: int, db: DbSession, user:CurrentUser) -> FriendRequestResponse:
@@ -114,7 +121,7 @@ def accept_request(request_id: int, db: DbSession, user:CurrentUser) -> FriendRe
         db.add(Friendship(user_a_id=user_a_id, user_b_id=user_b_id))
     
     db.commit()
-    return(request_response(req))
+    return(request_response(db, req))
 
 @router.post("/requests/{request_id}/reject", dependencies=[Depends(require_trusted_origin)])
 def reject_request(request_id: int, db: DbSession, user: CurrentUser) -> FriendRequestResponse:
@@ -127,7 +134,7 @@ def reject_request(request_id: int, db: DbSession, user: CurrentUser) -> FriendR
     req.status = "REJECTED"
     
     db.commit()
-    return(request_response(req))
+    return(request_response(db, req))
 
 @router.get("")
 def list_friends(user: CurrentUser, db: DbSession) -> list[FriendResponse]:
