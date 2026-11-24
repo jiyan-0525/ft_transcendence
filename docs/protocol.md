@@ -1,6 +1,6 @@
 # Client–Server Protocol (Draft v0.2)
 
-**Status:** health, database readiness, session authentication and the text-post API reflect the Week 1 implementation. Other domain endpoints and the WebSocket contract are proposals.
+**Status:** health, database readiness, session authentication, the text-post API and friendships reflect the implementation. Other domain endpoints and the WebSocket contract are proposals.
 
 **Stack:** React 19 + TypeScript frontend (React Router 7, Zustand 5, TanStack
 Query 5); Python 3.12 + FastAPI backend; PostgreSQL with SQLAlchemy 2.0 and
@@ -124,7 +124,36 @@ Status codes agreed with the frontend (details in `docs/handoff/auth-frontend.md
 
 ---
 
-## 5. Users and friendships (planned)
+## 5. Users and friendships
+
+### Implemented friendships
+
+All routes require an active session. The session supplies the acting user. Writes also pass the trusted-origin check. Routes live in `packages/server/app/friends.py`.
+
+A friend request contains `id`, `requester_id`, `requester_username`, `addressee_id`, `addressee_username`, `status` (`PENDING`, `ACCEPTED` or `REJECTED`) and `created_at`. A friend contains `user_id`, `username` and `since`.
+
+| Method | Route | Result |
+|---|---|---|
+| GET | `/api/friends` | 200 with an array of friends. Empty array if none. |
+| GET | `/api/friends/requests` | 200 with `{ "incoming": [...], "outgoing": [...] }`. Only `PENDING` requests, newest first. |
+| POST | `/api/friends/requests` | Body `{ "user_id": 7 }`. 201 with the request. See rules below. |
+| POST | `/api/friends/requests/{id}/accept` | 200 with the request as `ACCEPTED`. Addressee only. |
+| POST | `/api/friends/requests/{id}/reject` | 200 with the request as `REJECTED`. Addressee only. |
+| DELETE | `/api/friends/{user_id}` | 204. Either friend may remove the friendship. |
+
+Sending a request:
+
+- To yourself → `422`. Unknown user → `404`.
+- Already friends → `409`.
+- The other user already has a pending request to you → `409`. Accept theirs instead.
+- Sending again while your request is pending returns the same request.
+- After a removal or rejection, sending again reopens your earlier request as `PENDING`.
+
+Accept and reject return `404` for an unknown request, `403` when you are not the addressee and `409` when the request is no longer pending. Accepting updates the request and creates the friendship in one transaction. Removing a friendship you do not have returns `404`.
+
+Open decision: whether a rejected requester may ask again (currently allowed).
+
+### Planned users API
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -133,15 +162,6 @@ Status codes agreed with the frontend (details in `docs/handoff/auth-frontend.md
 | `PUT` | `/api/users/me/avatar` | Upload or replace the avatar |
 | `DELETE` | `/api/users/me/avatar` | Reset to the default avatar |
 | `GET` | `/api/users/:id/content` | Published content by this user |
-| `GET` | `/api/friends` | Accepted friends |
-| `GET` | `/api/friends/requests` | Incoming and outgoing pending requests |
-| `POST` | `/api/friends/requests` | Send a request `{ "userId": "..." }` |
-| `POST` | `/api/friends/requests/:id/accept` | Accept |
-| `POST` | `/api/friends/requests/:id/reject` | Reject |
-| `DELETE` | `/api/friends/:userId` | Remove a friend |
-
-Friend requests are unique per pair and idempotent. Accepting a request creates
-the friendship in one transaction.
 
 ---
 
