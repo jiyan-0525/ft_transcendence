@@ -16,6 +16,11 @@ def login(client, acc):
     assert client.post("/api/auth/login", json=credentials(acc)).status_code == 200
     return client.get("/api/auth/me").json()["id"]
 
+def befriend(requester, addressee, addressee_id):
+    req = requester.post("/api/friends/requests", json={"user_id": addressee_id})
+    assert req.status_code == 201
+    accepted = addressee.post(f"/api/friends/requests/{req.json()['id']}/accept")
+    assert accepted.status_code == 200
 
 def test_send_friend_request(auth, account):
     anna, _ = auth
@@ -181,3 +186,36 @@ def test_remove_friend(auth, account):
     with TestClient(app, base_url="https://testserver") as guest:
         assert guest.delete(f"/api/friends/{anna_id}").status_code == 401
 
+def test_cannot_request_existing_friend(auth, account):
+    anna, _ = auth
+    login(anna, account)
+
+    with TestClient(app, base_url="https://testserver") as ben:
+        ben_id = login(ben, new_account())
+        befriend(anna, ben, ben_id)
+
+        assert anna.post("/api/friends/requests", json={"user_id": ben_id}).status_code == 409
+
+
+def test_cannot_send_request_back(auth, account):
+    anna, _ = auth
+    anna_id = login(anna, account)
+
+    with TestClient(app, base_url="https://testserver") as ben:
+        ben_id = login(ben, new_account())
+        assert anna.post("/api/friends/requests", json={"user_id": ben_id}).status_code == 201
+
+        assert ben.post("/api/friends/requests", json={"user_id": anna_id}).status_code == 409
+
+
+def test_request_again_after_removal(auth, account):
+    anna, _ = auth
+    login(anna, account)
+
+    with TestClient(app, base_url="https://testserver") as ben:
+        ben_id = login(ben, new_account())
+        befriend(anna, ben, ben_id)
+        assert anna.delete(f"/api/friends/{ben_id}").status_code == 204
+
+        befriend(anna, ben, ben_id)          # klappt jetzt ein zweites Mal
+        assert [f["user_id"] for f in anna.get("/api/friends").json()] == [ben_id]

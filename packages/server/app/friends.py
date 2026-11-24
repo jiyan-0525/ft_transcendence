@@ -42,16 +42,41 @@ def find_request(db: DbSession, request_id: int) -> FriendRequest:
         raise HTTPException(404, "Friend Request not found.")
     return(req)
 
+def find_friendship(db: DbSession, first_id: int, second_id: int) -> Friendship | None:
+    user_a_id, user_b_id = sorted((first_id, second_id))
+    return db.scalar(
+        select(Friendship).where(
+            Friendship.user_a_id == user_a_id,
+            Friendship.user_b_id == user_b_id,
+        )
+    )
+
 @router.post("/requests", status_code=201, dependencies=[Depends(require_trusted_origin)])
 def send_request(body: FriendRequestInput, db: DbSession, user: CurrentUser) -> FriendRequestResponse:
     if body.user_id == user.id:
         raise HTTPException(422, "You cannot send a friends request to yourself.")
     if(db.get(User, body.user_id) is None):
         raise HTTPException(404, "User not found.")
+    if find_friendship(db, user.id, body.user_id) is not None:
+        raise HTTPException(409, "You are already friends.")
+
+    reverse = db.scalar(
+        select(FriendRequest).where(
+            FriendRequest.requester_id == body.user_id,
+            FriendRequest.addressee_id == user.id,
+            FriendRequest.status == "PENDING",
+        )
+    )
+    if reverse is not None:
+        raise HTTPException(409, "This user has already sent you a request.")
+
     existing = db.scalar(
         select(FriendRequest).where(FriendRequest.requester_id == user.id, FriendRequest.addressee_id == body.user_id)
     )
     if existing is not None:
+        if existing.status != "PENDING":
+            existing.status = "PENDING"
+            db.commit()
         return request_response(existing)
     req = FriendRequest(requester_id=user.id, addressee_id=body.user_id)
     db.add(req)
@@ -84,12 +109,8 @@ def accept_request(request_id: int, db: DbSession, user:CurrentUser) -> FriendRe
         raise HTTPException(409, "This request is no longer active.")
     
     req.status = "ACCEPTED"
-    user_a_id, user_b_id = sorted((req.requester_id, req.addressee_id))
-    already = db.scalar(
-        select(Friendship).where(Friendship.user_a_id == user_a_id, Friendship.user_b_id == user_b_id,)
-        
-    )
-    if already is None:
+    if find_friendship(db, req.requester_id, req.addressee_id) is None:
+        user_a_id, user_b_id = sorted((req.requester_id, req.addressee_id))
         db.add(Friendship(user_a_id=user_a_id, user_b_id=user_b_id))
     
     db.commit()
@@ -127,12 +148,7 @@ def list_friends(user: CurrentUser, db: DbSession) -> list[FriendResponse]:
 
 @router.delete("/{user_id}", status_code = 204, dependencies=[Depends(require_trusted_origin)])
 def delete_friend(user_id: int, db: DbSession, user: CurrentUser) -> None:
-    user_a_id, user_b_id = sorted((user.id, user_id))
-    friendship  = db.scalar(select(Friendship).where(
-        Friendship.user_a_id == user_a_id,
-        Friendship.user_b_id == user_b_id,
-        )
-    )
+    friendship = find_friendship(db, user.id, user_id)
 
     if friendship is None:
         raise HTTPException(404, "Friendship not found.")
