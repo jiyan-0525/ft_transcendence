@@ -62,10 +62,7 @@ export const routes: RouteObject[] = [
         path: 'friends',
         element: (
           <RequireAuth>
-            {planned(
-              'Friends',
-              'Send, accept, reject and remove friend connections.',
-            )}
+             <FriendsPage />
           </RequireAuth>
         ),
       },

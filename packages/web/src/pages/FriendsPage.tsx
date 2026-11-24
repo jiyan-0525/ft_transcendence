@@ -53,7 +53,7 @@ export default function FriendsPage() {
       setFriendRequests(requests)
       setFriends(friends)
     } catch (error) {
-      if (error instanceof Error) {
+      if (!signal?.aborted && error instanceof Error) {
         setLoadError('Could not load friends. Refresh to try again.')
       }
     } finally {
