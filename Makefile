@@ -6,19 +6,21 @@ WEB := packages/web
 COMPOSE := docker compose -p transcendence-db -f compose.db.yml
 PORT ?= 8000
 
-.PHONY: help setup up down db migrate test logs dev \
+.PHONY: help env setup up down db migrate test logs dev dev-all dev-stop \
 	web-install web-dev web-lint web-typecheck web-test web-build
 
 help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*## "} /^[a-z-]+:.*## / {printf "  %-12s %s\n", $$1, $$2}' Makefile
 
-setup: ## Create .env and .venv if missing; install dependencies
-	@test -f .env || cp .env.example .env
+env: ## Create .env from .env.example if it is missing
+	@test -f .env || { cp .env.example .env; echo 'Created .env from .env.example; check the credentials before starting the API.'; }
+
+setup: env ## Create .env and .venv if missing; install dependencies
 	@test -x "$(PY)" || $(PYTHON) -m venv .venv
 	@"$(PY)" -m pip install -r $(SERVER)/requirements.txt pytest
 	@echo 'Setup complete. Check credentials in .env before make up.'
 
-up: ## Start PostgreSQL and wait for readiness
+up: env ## Start PostgreSQL and wait for readiness
 	@$(COMPOSE) up -d db
 	@attempt=0; \
 	until $(COMPOSE) exec -T db sh -c 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"' >/dev/null 2>&1; do \
@@ -33,7 +35,7 @@ down: ## Stop PostgreSQL and keep its data
 db: ## Open PostgreSQL shell
 	@$(COMPOSE) exec db sh -c 'exec psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"'
 
-migrate: ## Apply pending database migrations
+migrate: env ## Apply pending database migrations
 	@cd $(SERVER) && "$(PY)" -m alembic upgrade head
 
 test: ## Check database connection, schema and backend tests (DB must be running/migrated)
@@ -44,8 +46,30 @@ test: ## Check database connection, schema and backend tests (DB must be running
 logs: ## Follow PostgreSQL logs
 	@$(COMPOSE) logs -f db
 
-dev: ## Run FastAPI locally; Ctrl-C stops it (DB must be ready)
+dev: env ## Run FastAPI locally; Ctrl-C stops it (DB must be ready)
 	@cd $(SERVER) && "$(PY)" -m uvicorn app.main:app --reload --host 127.0.0.1 --port $(PORT)
+
+dev-all: env ## Run FastAPI and Vite together; Ctrl-C stops both (DB must be ready)
+	@set -eu; \
+	(cd $(SERVER) && exec "$(PY)" -m uvicorn app.main:app --reload --host 127.0.0.1 --port $(PORT)) & \
+	api=$$!; \
+	trap 'kill $$api 2>/dev/null || true' EXIT INT TERM; \
+	echo "Backend  http://127.0.0.1:$(PORT)"; \
+	echo 'Frontend http://localhost:5173 (Ctrl-C stops both)'; \
+	cd $(WEB) && VITE_USE_MOCKS=false npm run dev
+
+dev-stop: ## Stop leftover backend and frontend dev servers
+	@for p in $(PORT) 5173; do \
+		if command -v ss >/dev/null 2>&1; then \
+			pids=$$(ss -Hltnp "sport = :$$p" 2>/dev/null | grep -o 'pid=[0-9]*' | cut -d= -f2 | sort -u | tr '\n' ' '); \
+		else \
+			pids=$$(lsof -ti tcp:$$p 2>/dev/null | tr '\n' ' ' || true); \
+		fi; \
+		if test -n "$$pids"; then \
+			echo "Stopping PID(s) $$pids on port $$p"; \
+			kill $$pids 2>/dev/null || true; \
+		fi; \
+	done
 
 web-install: ## Install frontend dependencies
 	@cd $(WEB) && npm install

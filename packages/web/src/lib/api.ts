@@ -55,6 +55,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
+/**
+ * A 5xx with no protocol body means the request never reached the app: the
+ * Vite dev proxy or a gateway answered instead (typically because the API is
+ * not running). Report it as a connectivity problem so the UI can say
+ * something actionable instead of the opaque "Request failed (500).".
+ */
+function unreachableResponse(status: number): ApiError {
+  return new ApiError({
+    code: 'NETWORK',
+    message: 'Could not reach the API server. Make sure the backend is running.',
+    status,
+  })
+}
+
 function statusToCode(status: number): ApiErrorCode {
   if (status === 401) return 'UNAUTHENTICATED'
   if (status === 403) return 'FORBIDDEN'
@@ -202,7 +216,9 @@ export async function request<T>(
       body = JSON.parse(text)
     } catch {
       if (!response.ok) {
-        throw errorFromBody(response.status, undefined)
+        throw response.status >= 500
+          ? unreachableResponse(response.status)
+          : errorFromBody(response.status, undefined)
       }
       throw new ApiError({
         code: 'MALFORMED_RESPONSE',
@@ -213,6 +229,9 @@ export async function request<T>(
   }
 
   if (!response.ok) {
+    if (!text && response.status >= 500) {
+      throw unreachableResponse(response.status)
+    }
     throw errorFromBody(response.status, body)
   }
 

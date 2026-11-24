@@ -101,6 +101,26 @@ describe('request', () => {
     })
   })
 
+  it('reports an empty 5xx from a proxy as an unreachable server', async () => {
+    // Vite's dev proxy answers 500 with an empty body when the API is down.
+    stubFetch(async () => new Response(null, { status: 500 }))
+
+    await expect(request('/auth/register', { method: 'POST' })).rejects.toMatchObject({
+      code: 'NETWORK',
+      status: 500,
+      message: 'Could not reach the API server. Make sure the backend is running.',
+    })
+  })
+
+  it('reports a non-JSON 5xx from a gateway as an unreachable server', async () => {
+    stubFetch(async () => new Response('<html>Bad Gateway</html>', { status: 502 }))
+
+    await expect(request('/auth/register', { method: 'POST' })).rejects.toMatchObject({
+      code: 'NETWORK',
+      status: 502,
+    })
+  })
+
   it('reports a network failure without leaking the raw fetch error', async () => {
     stubFetch(async () => {
       throw new TypeError('Failed to fetch')

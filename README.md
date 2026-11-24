@@ -72,6 +72,8 @@ These commands start PostgreSQL, apply the database migrations and run FastAPI w
 
 Keep port 8000 for the default Vite proxy. Press `Ctrl-C` to stop the API and run `make down` to stop the database. Database data is retained between restarts.
 
+To run the API and the frontend together in one terminal, use `make dev-all` instead of `make dev` (see [Frontend and local HTTPS](#frontend-and-local-https)). `Ctrl-C` stops both servers.
+
 ### Tests and useful commands
 
 With the database running and migrations applied, run:
@@ -91,12 +93,14 @@ This checks database connectivity and model/migration consistency, then runs the
 | `make db` | Open the PostgreSQL shell |
 | `make migrate` | Apply pending database migrations |
 | `make dev` | Start the backend development server |
+| `make dev-all` | Start the backend and frontend together |
+| `make dev-stop` | Stop leftover backend and frontend dev servers |
 | `make test` | Run backend checks and tests |
 | `make logs` | Follow database logs |
 
 ### Frontend and local HTTPS
 
-Run `make web-install` once. In a separate terminal from `make dev`, run `make web-dev` and open [http://localhost:5173](http://localhost:5173). The development target uses the real API. Run `make web-test` for frontend tests using mock authentication.
+Run `make web-install` once. Then either run `make dev-all` (backend and frontend from one terminal) or, in a separate terminal from `make dev`, run `make web-dev`, and open [http://localhost:5173](http://localhost:5173). The development target uses the real API. Run `make web-test` for frontend tests using mock authentication. If a port is still held by a server left over from an earlier session, `make dev-stop` releases ports 8000 and 5173.
 
 For the local HTTPS stack, configure `CONTAINER_DATABASE_URL` in root `.env` and run `make stack-up`. Open [https://localhost:8443](https://localhost:8443). See the [backend handoff](docs/handoff/week-1-backend.md) for the container database URL and local certificate setup. Run `make stack-down` to stop the stack while preserving database data.
 
