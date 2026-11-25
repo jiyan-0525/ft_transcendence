@@ -144,3 +144,36 @@ class Friendship(Base):
     created_at: Mapped[datetime] =mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+class Conversation(Base):
+    __tablename__ = "conversations"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
+    server_default=func.now()
+    )
+
+class ConversationMember(Base):
+    __tablename__ = "conversation_members"
+    conversation_id: Mapped[int] = mapped_column(
+        ForeignKey("conversations.id", ondelete ="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete = "CASCADE"), primary_key=True, index=True
+    )
+
+    last_read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+class Message(Base):
+    __tablename__ = "messages"
+    __table_args__ = (Index("ix_messages_conversation_created_id", "conversation_id", "created_at", "id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    conversation_id: Mapped[int] = mapped_column(
+        ForeignKey("conversations.id", ondelete = "CASCADE")
+    )
+    sender_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete = "CASCADE")
+    )
+    body: Mapped[str] = mapped_column(String(2000))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
