@@ -8,13 +8,14 @@ from app.config import settings
 from app.errors import install_error_handlers
 from app.posts import router as posts_router
 from app.friends import router as friends_router
-
+from app.chat import router as chat_router
 
 app = FastAPI(title=settings.app_name)
 install_error_handlers(app)
 app.include_router(auth_router)
 app.include_router(posts_router)
 app.include_router(friends_router)
+app.include_router(chat_router)
 
 
 @app.get("/api/health")
@@ -32,3 +33,4 @@ def status(db: DbSession):
     except SQLAlchemyError as exc:
         raise HTTPException(503, "Database unavailable.") from exc
     return {"status": "ok", "database": "ok"}
+
